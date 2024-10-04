@@ -1,0 +1,7 @@
+/target
+.idea/
+*.iml
+bin/
+out/
+out.zip
+*.blend1
