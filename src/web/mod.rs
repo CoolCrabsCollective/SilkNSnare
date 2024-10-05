@@ -1,7 +1,8 @@
+mod render;
 mod spring;
 
+use crate::{tree::get_arena_center, web::spring::Spring};
 use bevy::prelude::*;
-use crate::web::spring::Spring;
 
 pub struct WebSimulationPlugin;
 
@@ -10,19 +11,19 @@ pub struct Particle {
     pub velocity: Vec3,
     pub force: Vec3,
     pub mass: f32,
-    pub pinned: bool
+    pub pinned: bool,
 }
 
 #[derive(Component)]
 pub struct Web {
     pub particles: Vec<Particle>,
-    pub springs: Vec<Spring>
+    pub springs: Vec<Spring>,
 }
 
 impl Default for Web {
     fn default() -> Self {
         Web {
-            particles: vec![], springs: vec![]
+            particles: vec![], springs: vec![],
         }
     }
 }
@@ -36,16 +37,17 @@ impl Plugin for WebSimulationPlugin {
 
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
+    let arena_center = get_arena_center();
     let mut web: Web = Default::default();
     web.particles.push(Particle {
-        position: Vec3::new(0.0, 0.0, 0.0),
+        position: arena_center +Vec3::new(0.0, 0.0, 0.0),
         velocity: Default::default(),
         force: Default::default(),
         mass: 1.0,
         pinned: false,
     });
     web.particles.push(Particle {
-        position: Vec3::new(0.0, 1.0, 0.0),
+        position: arena_center +Vec3::new(0.0, 1.0, 0.0),
         velocity: Default::default(),
         force: Default::default(),
         mass: 1.0,
