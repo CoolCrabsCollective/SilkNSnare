@@ -22,6 +22,9 @@ fn spawn_tree(
     });
 }
 
+
+
+
 fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, time: Res<Time>) {
     let t = (time.elapsed_seconds() / 2.0).min(1.0);
     if let Ok((mut camera_transform, _)) = camera_transform_query.get_single_mut() {

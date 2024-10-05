@@ -7,9 +7,11 @@ use bevy::render::texture::{ImageAddressMode, ImageFilterMode, ImageSamplerDescr
 use bevy::render::RenderPlugin;
 use bevy::{window, DefaultPlugins};
 use tree::TreePlugin;
+use crate::spider::SpiderPlugin;
 
 mod game;
 mod tree;
+mod spider;
 
 fn main() {
     let mut app = App::new();
@@ -48,6 +50,7 @@ fn main() {
 
     app.add_plugins(GamePlugin);
     app.add_plugins(TreePlugin);
+    app.add_plugins(SpiderPlugin);
 
     app.run();
 }
