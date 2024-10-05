@@ -1,3 +1,4 @@
+use crate::web::Web;
 use bevy::{prelude::*, window::PrimaryWindow};
 
 pub struct SpiderPlugin;
@@ -39,6 +40,7 @@ fn move_spider(
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
     _time: Res<Time>,
+    web_query: Query<&Web>,
     spider_plane: Res<WebPlane>,
 ) {
     if let Ok((mut spider, mut spider_transform)) = spider_query.get_single_mut() {
@@ -49,8 +51,8 @@ fn move_spider(
                 if let Some(ray) = camera.viewport_to_world(&camera_global_transform, position) {
                     let n = spider_plane.plane.xyz();
                     let d = spider_plane.plane.w;
-                    let lambda = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
-                    let p = ray.origin + ray.direction * lambda;
+                    let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
+                    let p = ray.origin + ray.direction * λ;
                     spider.target_position = p;
                 }
             } else {
