@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
-use crate::web::Web;
 use bevy::{math, prelude::*, window::PrimaryWindow};
+use crate::web::{Particle, Web};
+use crate::web::spring::Spring;
 use bevy::math::NormedVectorSpace;
 
 pub struct SpiderPlugin;
@@ -44,7 +45,7 @@ fn move_spider(
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
     time: Res<Time>,
-    web_query: Query<&mut Web>,
+    mut web_query: Query<&mut Web>,
     spider_plane: Res<WebPlane>,
 ) {
     if let Ok((mut spider, mut spider_transform)) = spider_query.get_single_mut() {
@@ -57,7 +58,9 @@ fn move_spider(
                     let d = spider_plane.plane.w;
                     let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                     let p = ray.origin + ray.direction * λ;
+
                     spider.target_position = p;
+                    set_new_target(p, &mut *spider, &mut *spider_transform, &mut *web_query.single_mut());
                  }
             } else {
                 println!("Cursor is not in the game window.");
@@ -95,7 +98,7 @@ fn move_spider(
             };
             let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
             let base_transform_mat = Mat3::from_cols(spider_plane.left, -spider_plane.plane.xyz(),  spider_plane_up);
-            println!("{:?}", current_angle);
+            //println!("{:?}", current_angle);
             if (current_angle - angle).abs() < 0.05 || (current_angle - angle - 2.0 * PI).abs() < 0.05 {
                 // move
                 spider_transform.translation = spider_transform.translation + move_dir * time.delta_seconds() * 0.8;
@@ -116,6 +119,71 @@ fn move_spider(
 
 
         }
+    }
+}
+
+fn set_new_target(p: Vec3,
+                  spider: &mut Spider,
+                  spider_transform: &Transform,
+                  web: &mut Web) {
+
+    spider.target_position = p;
+
+    let mut spring_idx: Option<usize> = None;
+
+    for i in 0..web.springs.len() {
+        let spring = &web.springs[i];
+        let result = spring.intersects(web,
+                                       Vec3::new(0.0, 0.0, -1.0),
+                                       spider_transform.translation, spider.target_position);
+        if result.is_none() {
+            continue
+        }
+
+        let new_pos = result.unwrap();
+        if new_pos.distance_squared(spider_transform.translation) < 0.1 * 0.1 {
+            continue
+        }
+
+        spider.target_position = new_pos;
+        spring_idx = Some(i);
+    }
+
+    if spring_idx.is_some() {
+        let existing_p1 = web.get_particle_index(spider_transform.translation, 0.2);
+        let existing_p2 = web.get_particle_index(spider.target_position, 0.2);
+
+        let p1 = if existing_p1.is_none() {
+            web.particles.push(Particle {
+                position: spider_transform.translation,
+                velocity: Default::default(),
+                force: Default::default(),
+                mass: 0.3,
+                pinned: true,
+            });
+            web.particles.len() - 1
+        } else {
+            existing_p1.unwrap()
+        };
+
+        let p2 = if existing_p2.is_none() {
+            web.particles.push(Particle {
+                position: spider.target_position,
+                velocity: Default::default(),
+                force: Default::default(),
+                mass: 0.3,
+                pinned: false,
+            });
+            let spring: Spring = web.springs.swap_remove(spring_idx.unwrap());
+            web.springs.push(Spring::new(web, web.particles.len() - 1, spring.first_index, 400.0, 1.0));
+            web.springs.push(Spring::new(web, web.particles.len() - 1, spring.second_index, 400.0, 1.0));
+
+            web.particles.len() - 1
+        } else {
+            existing_p2.unwrap()
+        };
+
+        web.springs.push(Spring::new(web, p1, p2, 400.0, 1.0));
     }
 }
 

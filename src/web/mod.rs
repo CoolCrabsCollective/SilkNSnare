@@ -1,8 +1,9 @@
 mod render;
-mod spring;
+pub(crate) mod spring;
 
 use std::f32::consts::PI;
-use crate::{tree::get_arena_center, web::spring::Spring};
+use crate::{tree::get_arena_center};
+use crate::web::spring::Spring;
 use bevy::prelude::*;
 use render::{clear_web, render_web};
 
@@ -31,6 +32,17 @@ impl Default for Web {
     }
 }
 
+impl Web {
+    pub(crate) fn get_particle_index(&self, pos: Vec3, ε: f32) -> Option<usize> {
+        for i in 0..self.particles.len() {
+            if self.particles[i].position.distance_squared(pos) < ε * ε {
+                return Some(i)
+            }
+        }
+        None
+    }
+}
+
 impl Plugin for WebSimulationPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, update_simulation);
@@ -42,7 +54,7 @@ impl Plugin for WebSimulationPlugin {
 
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
-    let web = generate_web(5, 7, 1.0);
+    let web = generate_web(2, 6, 1.0);
     commands.spawn(web);
 }
 
