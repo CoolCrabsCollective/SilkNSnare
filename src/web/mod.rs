@@ -3,6 +3,7 @@ mod spring;
 
 use crate::{tree::get_arena_center, web::spring::Spring};
 use bevy::prelude::*;
+use render::{clear_web, render_web};
 
 pub struct WebSimulationPlugin;
 
@@ -33,6 +34,8 @@ impl Default for Web {
 impl Plugin for WebSimulationPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, update_simulation);
+        app.add_systems(Update, clear_web);
+        app.add_systems(Update, render_web.after(clear_web));
         println!("WebSimulationPlugin init");
 
         let arena_center = get_arena_center();

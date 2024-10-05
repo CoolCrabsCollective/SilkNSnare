@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use crate::web::WebSimulationPlugin;
-use bevy::math::vec3;
+use bevy::math::{vec3, VectorSpace};
 use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::prelude::Projection::Perspective;
 use bevy::prelude::*;
@@ -51,7 +51,7 @@ fn setup(
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             shadows_enabled: true,
-            illuminance: 50000.0,
+            illuminance: 10000.0,
             ..default()
         },
         transform: get_initial_sun_transform(),
@@ -94,6 +94,7 @@ pub fn get_initial_camera_transform() -> Transform {
 fn get_initial_sun_transform() -> Transform {
     let res = get_initial_camera_transform();
     res.with_translation(res.translation + Vec3::new(0.0, 0.0, 10.0))
+        .looking_at(Vec3::ZERO, Vec3::Y)
 }
 
 /*
