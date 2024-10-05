@@ -2,7 +2,8 @@ mod render;
 mod spring;
 
 use std::f32::consts::PI;
-use crate::{tree::get_arena_center, web::spring::Spring};
+use crate::{tree::get_arena_center};
+use crate::web::spring::Spring;
 use bevy::prelude::*;
 use render::{clear_web, render_web};
 
@@ -28,6 +29,17 @@ impl Default for Web {
             particles: vec![],
             springs: vec![],
         }
+    }
+}
+
+impl Web {
+    pub(crate) fn get_particle_index(&self, pos: Vec3, ε: f32) -> Option<usize> {
+        for i in 0..self.particles.len() {
+            if self.particles[i].position.distance_squared(pos) < ε * ε {
+                return Some(i)
+            }
+        }
+        None
     }
 }
 

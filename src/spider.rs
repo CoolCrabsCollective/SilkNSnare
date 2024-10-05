@@ -75,7 +75,10 @@ fn move_spider(
 
         let web = web_query.single();
 
-        for spring in &web.springs {
+        let mut spring_idx: Option<usize> = None;
+
+        for i in 0..web.springs.len() {
+            let spring = &web.springs[i];
             let result = spring.intersects(web,
                                            Vec3::new(0.0, 0.0, -1.0),
                                            spider_transform.translation, spider.target_position);
@@ -89,8 +92,21 @@ fn move_spider(
             }
 
             spider.target_position = new_pos;
+            spring_idx = Some(i);
         }
 
+        if spring_idx.is_some() {
+            let spring = &web.springs[spring_idx.unwrap()];
+
+            let p1 = web.get_particle_index(spider_transform.translation, 0.2);
+            let p2 = web.get_particle_index(spider.target_position, 0.2);
+
+            let new_p1 = if p1.is_none() {
+
+            } else {
+
+            };
+        }
 
         spider_transform.translation = spider.target_position;
     }
