@@ -1,5 +1,7 @@
+use std::f32::consts::PI;
 use crate::web::Web;
 use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::math::NormedVectorSpace;
 
 pub struct SpiderPlugin;
 
@@ -30,7 +32,7 @@ impl Plugin for SpiderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_spider);
         app.add_systems(Update, move_spider);
-        app.insert_resource(WebPlane { plane: Vec4::new(0.0, 0.0, -1.0, 0.25), left: Vec3::new(-1.0, 0.0, 0.0) });
+        app.insert_resource(WebPlane { plane: Vec4::new(0.0, 0.0, -1.0, 0.25), left: Vec3::new(0.0, 1.0, 0.0) });
 
     }
 }
@@ -39,7 +41,7 @@ fn move_spider(
     q_windows: Query<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
-    _time: Res<Time>,
+    time: Res<Time>,
     web_query: Query<&mut Web>,
     spider_plane: Res<WebPlane>,
 ) {
@@ -54,10 +56,15 @@ fn move_spider(
                     let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                     let p = ray.origin + ray.direction * λ;
                     spider.target_position = p;
+                    
+                    let direction_vec = spider.target_position - spider_transform.translation;
+                    let angle = direction_vec.y.atan2(direction_vec.x);
 
-                    let new_direction = spider.target_position - spider_transform.translation;
+                    let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
 
-                    let angle = new_direction.y.atan2(new_direction.x);
+                    let base_transform_mat = Mat3::from_cols(spider_plane.left, -spider_plane.plane.xyz(),  spider_plane_up);
+
+                    spider_transform.rotation = Quat::from_axis_angle(-spider_plane.plane.xyz(), angle - PI/2.0) * Quat::from_mat3(&base_transform_mat);
 
 
                  }
@@ -66,12 +73,6 @@ fn move_spider(
             }
         }
 
-        let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
-
-        let transform_mat = Mat3::from_cols(spider_plane.left, spider_plane.plane.xyz(), spider_plane_up);
-
-
-        //spider_transform.rotation = Quat::from_mat3(&transform_mat);
 
         let web = web_query.single();
 
@@ -79,7 +80,12 @@ fn move_spider(
             if spring.intersects(spider_transform.translation, spider.target_position) {}
         }
 
-        spider_transform.translation = spider.target_position;
+        if (spider_transform.translation - spider.target_position).norm() < 1e-2 {
+            spider_transform.translation = spider.target_position;
+        } else {
+            let move_dir = (spider.target_position - spider_transform.translation).normalize();
+            spider_transform.translation = spider_transform.translation + move_dir * time.delta_seconds() * 0.8;
+        }
     }
 }
 
@@ -96,7 +102,7 @@ fn spawn_spider(
             transform: Transform {
                 translation: Vec3::new(0.0, 0.0, 0.0),
                 rotation: Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0),
-                scale: Vec3::new(0.25, 0.25, 0.25),
+                scale: Vec3::new(0.15, 0.15, 0.15),
             },
             global_transform: Default::default(),
             visibility: Default::default(),
