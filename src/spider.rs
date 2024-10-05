@@ -287,6 +287,7 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
             } else {
                 0.0
             };
+            spider.current_position = SpiderPosition::WEB(spring_idx.unwrap(), 1.0 - t);
             spider.target_position = SpiderPosition::WEB(spring_idx.unwrap(), t);
             println!("Path is along existing spring");
         }
