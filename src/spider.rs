@@ -1,8 +1,8 @@
-use std::f32::consts::PI;
-use bevy::{math, prelude::*, window::PrimaryWindow};
-use crate::web::{Particle, Web};
 use crate::web::spring::Spring;
+use crate::web::{Particle, Web};
 use bevy::math::NormedVectorSpace;
+use bevy::{prelude::*, window::PrimaryWindow};
+use std::f32::consts::PI;
 
 pub struct SpiderPlugin;
 
@@ -158,7 +158,7 @@ fn set_new_target(p: Vec3,
                 position: spider_transform.translation,
                 velocity: Default::default(),
                 force: Default::default(),
-                mass: 0.3,
+                mass: 0.0,
                 pinned: true,
             });
             web.particles.len() - 1
@@ -171,7 +171,7 @@ fn set_new_target(p: Vec3,
                 position: spider.target_position,
                 velocity: Default::default(),
                 force: Default::default(),
-                mass: 0.3,
+                mass: 0.0,
                 pinned: false,
             });
             let spring: Spring = web.springs.swap_remove(spring_idx.unwrap());
