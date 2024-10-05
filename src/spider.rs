@@ -125,7 +125,7 @@ fn update_spider(
                 let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                 let p = ray.origin + ray.direction * λ;
 
-                set_new_target(p, &mut *spider, &mut *spider_transform, web);
+                set_new_target(p, &mut *spider, web);
             }
         } else {
             println!("Cursor is not in the game window.");
@@ -216,11 +216,11 @@ fn rotate_spider(web: &Web, spider: &mut Spider, time: &Res<Time>) {
     }
 }
 
-fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, web: &mut Web) {
-    let mut target_position = p;
+fn set_new_target(mut target_position: Vec3, spider: &mut Spider, web: &mut Web) {
+    let position = spider.current_position.to_vec3(web);
 
     if NNN {
-        spider.current_position = SpiderPosition::TREE(spider_transform.translation);
+        spider.current_position = SpiderPosition::TREE(position);
         spider.target_position = SpiderPosition::TREE(target_position);
         return;
     }
@@ -231,15 +231,15 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
         SpiderPosition::TREE(_) => None,
     };
 
-    let move_dir = (target_position - spider_transform.translation).normalize();
-    let mut closest_spring: Vec3 = spider_transform.translation - move_dir * 10.0;
+    let move_dir = (target_position - position).normalize();
+    let mut closest_spring: Vec3 = position - move_dir * 10.0;
 
     for i in 0..web.springs.len() {
         let spring = &web.springs[i];
         let result = spring.intersects(
             web,
             Vec3::new(0.0, 0.0, -1.0),
-            spider_transform.translation - move_dir * 10.0,
+            position - move_dir * 10.0,
             target_position + move_dir * 10.0,
         );
 
@@ -249,14 +249,14 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
 
         let new_pos = result.unwrap();
 
-        if new_pos.dot(move_dir) - spider_transform.translation.dot(move_dir) > 0.1
+        if new_pos.dot(move_dir) - position.dot(move_dir) > 0.1
             && new_pos.dot(move_dir) < target_position.dot(move_dir)
         {
             target_position = new_pos;
             dest_spring_idx = Some(i);
         }
 
-        if (new_pos.dot(move_dir) - spider_transform.translation.dot(move_dir)).abs() < 0.1
+        if (new_pos.dot(move_dir) - position.dot(move_dir)).abs() < 0.1
             && new_pos.dot(move_dir) < closest_spring.dot(move_dir)
         {
             closest_spring = new_pos;
@@ -264,11 +264,11 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
         }
     }
 
-    let existing_p1 = web.get_particle_index(spider_transform.translation, 0.1);
+    let existing_p1 = web.get_particle_index(position, 0.1);
     let existing_p2 = web.get_particle_index(target_position, 0.1);
 
     if existing_p1 == existing_p2 && existing_p1.is_some() {
-        panic!("[FUCK] Destination and current position are the same particle!");
+        return; // not initiating to move far enough to initiate movement
     }
 
     if dest_spring_idx.is_none() && from_spring_idx.is_none() {
@@ -291,20 +291,19 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
             spider.target_position = SpiderPosition::WEB(spring_idx.unwrap(), t);
             println!("Path is along existing spring");
         }
-        return;
     }
 
     let p1 = if existing_p1.is_none() {
         if from_spring_idx.is_none() {
             web.particles.push(Particle {
-                position: spider_transform.translation,
+                position: position,
                 velocity: Default::default(),
                 force: Default::default(),
                 mass: 0.0,
                 pinned: true,
             });
         } else {
-            web.split_spring(from_spring_idx.unwrap(), spider_transform.translation);
+            web.split_spring(from_spring_idx.unwrap(), position);
         }
         web.particles.len() - 1
     } else {
