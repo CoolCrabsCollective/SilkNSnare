@@ -28,15 +28,16 @@ pub struct Web {
 }
 
 impl Web {
-    pub fn has_spring(&self, p1: usize, p2: usize) -> bool {
-        for spring in &self.springs {
+    pub fn get_spring(&self, p1: usize, p2: usize) -> Option<usize> {
+        for i in 0..self.springs.len() {
+            let spring = &self.springs[i];
             if spring.first_index == p1 && spring.second_index == p2
                 || spring.first_index == p2 && spring.second_index == p1
             {
-                return true;
+                return Some(i);
             }
         }
-        false
+        None
     }
 }
 
