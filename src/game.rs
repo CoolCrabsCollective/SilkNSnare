@@ -91,7 +91,7 @@ pub fn get_initial_camera_transform() -> Transform {
 }
 
 fn get_initial_sun_transform() -> Transform {
-    let mut res = get_initial_camera_transform();
+    let res = get_initial_camera_transform();
     res.with_translation(res.translation + Vec3::new(0.0, 0.0, 10.0))
 }
 
