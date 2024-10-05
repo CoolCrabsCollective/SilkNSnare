@@ -1,5 +1,5 @@
 mod render;
-mod spring;
+pub(crate) mod spring;
 
 use std::f32::consts::PI;
 use crate::{tree::get_arena_center};
@@ -54,7 +54,7 @@ impl Plugin for WebSimulationPlugin {
 
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
-    let web = generate_web(5, 7, 1.0);
+    let web = generate_web(2, 6, 1.0);
     commands.spawn(web);
 }
 
