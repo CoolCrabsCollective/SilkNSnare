@@ -1,4 +1,5 @@
 use bevy::{
+    log,
     prelude::*,
     render::{
         mesh::{Indices, PrimitiveTopology},
@@ -11,17 +12,19 @@ use super::Web;
 pub const WEB_SILK_THICKNESS: f32 = 0.025;
 
 #[derive(Component)]
-pub struct WebSegment(Handle<Mesh>);
+pub struct WebRenderSegment(Handle<Mesh>);
 
 pub fn clear_web(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    web_segments_query: Query<(Entity, &WebSegment)>,
+    web_render_segments_query: Query<(Entity, &WebRenderSegment)>,
 ) {
     // TODO: lets validate that we only have one web entity per frame..
-    for (web_segment_entity, WebSegment(web_segment_mesh_handle)) in web_segments_query.iter() {
+    for (web_render_segment_entity, WebRenderSegment(web_segment_mesh_handle)) in
+        web_render_segments_query.iter()
+    {
         meshes.remove(web_segment_mesh_handle);
-        commands.entity(web_segment_entity).despawn();
+        commands.entity(web_render_segment_entity).despawn();
     }
 }
 
@@ -29,17 +32,17 @@ pub fn render_web(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    web_data_query: Query<&Web>,
+    web_query: Query<&Web>,
     camera_query: Query<(&Transform, &Camera)>,
     time: Res<Time>,
 ) {
-    let Ok(web_data) = web_data_query.get_single() else {
-        println!("ERROR NO WEB OR MORE THAN ONE WEB");
+    let Ok(web_data) = web_query.get_single() else {
+        log::error!("ERROR NO WEB OR MORE THAN ONE WEB");
         return;
     };
 
     let Ok((camera_transform, _)) = camera_query.get_single() else {
-        println!("ERROR NO CAMERA OR MORE THAN ONE CAMERA");
+        log::error!("ERROR NO CAMERA OR MORE THAN ONE CAMERA");
         return;
     };
 
@@ -56,7 +59,7 @@ pub fn render_web(
             }),
             ..default()
         },
-        WebSegment(mesh_handle.clone()),
+        WebRenderSegment(mesh_handle.clone()),
     ));
 }
 

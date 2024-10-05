@@ -1,11 +1,13 @@
+mod ensnare;
 mod render;
 pub(crate) mod spring;
 
-use std::f32::consts::PI;
-use crate::{tree::get_arena_center};
+use crate::tree::get_arena_center;
 use crate::web::spring::Spring;
 use bevy::prelude::*;
+use ensnare::{debug_ensnare_entities, update_ensnared_entities};
 use render::{clear_web, render_web};
+use std::f32::consts::PI;
 
 pub struct WebSimulationPlugin;
 
@@ -38,7 +40,7 @@ impl Web {
     pub(crate) fn get_particle_index(&self, pos: Vec3, ε: f32) -> Option<usize> {
         for i in 0..self.particles.len() {
             if self.particles[i].position.distance_squared(pos) < ε * ε {
-                return Some(i)
+                return Some(i);
             }
         }
         None
@@ -47,16 +49,20 @@ impl Web {
 
 impl Plugin for WebSimulationPlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(Startup, spawn_simulation);
         app.add_systems(Update, update_simulation);
+
         app.add_systems(Update, clear_web);
         app.add_systems(Update, render_web.after(clear_web));
-        app.add_systems(Startup, spawn_simulation);
+
+        app.add_systems(Startup, debug_ensnare_entities.after(spawn_simulation));
+        app.add_systems(Update, update_ensnared_entities);
     }
 }
 
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
-    let web = generate_web(2, 6, 1.0,0.1, 100.0, 0.5);
+    let web = generate_web(2, 6, 1.0, 0.1, 100.0, 0.5);
     commands.spawn(web);
 }
 
@@ -83,11 +89,19 @@ fn generate_2_particle_example() -> Web {
         stiffness: 100.0,
         damping: 1.0,
         rest_length: 1.0,
+        ensnared_entities: vec![],
     });
     web
 }
 
-fn generate_web(row_count: usize, col_count: usize, size: f32, mass_density: f32, stiffness: f32, damping: f32) -> Web {
+fn generate_web(
+    row_count: usize,
+    col_count: usize,
+    size: f32,
+    mass_density: f32,
+    stiffness: f32,
+    damping: f32,
+) -> Web {
     let arena_center = get_arena_center();
     let mut web: Web = Default::default();
     web.mass_per_unit_length = mass_density;
@@ -100,7 +114,11 @@ fn generate_web(row_count: usize, col_count: usize, size: f32, mass_density: f32
     });
     for i in 0..row_count {
         for j in 0..col_count {
-            let left = if i == 0 { 0 } else { web.particles.len() - col_count };
+            let left = if i == 0 {
+                0
+            } else {
+                web.particles.len() - col_count
+            };
             let prev = web.particles.len() - 1;
 
             let r = (i as f32 + 1.0) / row_count as f32 * size;
@@ -120,14 +138,22 @@ fn generate_web(row_count: usize, col_count: usize, size: f32, mass_density: f32
 
             let new = web.particles.len() - 1;
 
-            web.springs.push(Spring::new(&web, new, left, stiffness, damping));
+            web.springs
+                .push(Spring::new(&web, new, left, stiffness, damping));
 
             if i != row_count - 1 && j != 0 {
-                web.springs.push(Spring::new(&web, new, prev, stiffness, damping));
+                web.springs
+                    .push(Spring::new(&web, new, prev, stiffness, damping));
             }
 
             if j == col_count - 1 {
-                web.springs.push(Spring::new(&web, new, web.particles.len() - col_count, stiffness, damping));
+                web.springs.push(Spring::new(
+                    &web,
+                    new,
+                    web.particles.len() - col_count,
+                    stiffness,
+                    damping,
+                ));
             }
         }
     }
@@ -152,11 +178,13 @@ fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
             let p2 = web.springs[j].second_index;
             if !web.particles[p1].pinned {
                 web.particles[p1].force += force;
-                web.particles[p1].mass += web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
+                web.particles[p1].mass +=
+                    web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
             }
             if !web.particles[p2].pinned {
                 web.particles[p2].force -= force;
-                web.particles[p2].mass += web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
+                web.particles[p2].mass +=
+                    web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
             }
         }
 
