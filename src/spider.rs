@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 use crate::web::Web;
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{math, prelude::*, window::PrimaryWindow};
 use bevy::math::NormedVectorSpace;
 
 pub struct SpiderPlugin;
@@ -16,6 +16,7 @@ struct Spider {
     food: f64,
     max_food: f64,
     target_position: Vec3,
+    current_rotation: f32,
 }
 
 impl Spider {
@@ -24,6 +25,7 @@ impl Spider {
             food: max_food,
             max_food,
             target_position,
+            current_rotation: 0.0,
         }
     }
 }
@@ -56,23 +58,11 @@ fn move_spider(
                     let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                     let p = ray.origin + ray.direction * λ;
                     spider.target_position = p;
-                    
-                    let direction_vec = spider.target_position - spider_transform.translation;
-                    let angle = direction_vec.y.atan2(direction_vec.x);
-
-                    let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
-
-                    let base_transform_mat = Mat3::from_cols(spider_plane.left, -spider_plane.plane.xyz(),  spider_plane_up);
-
-                    spider_transform.rotation = Quat::from_axis_angle(-spider_plane.plane.xyz(), angle - PI/2.0) * Quat::from_mat3(&base_transform_mat);
-
-
                  }
             } else {
                 println!("Cursor is not in the game window.");
             }
         }
-
 
         let web = web_query.single();
 
@@ -95,8 +85,36 @@ fn move_spider(
         if (spider_transform.translation - spider.target_position).norm() < 1e-2 {
             spider_transform.translation = spider.target_position;
         } else {
+
             let move_dir = (spider.target_position - spider_transform.translation).normalize();
-            spider_transform.translation = spider_transform.translation + move_dir * time.delta_seconds() * 0.8;
+            let angle = move_dir.y.atan2(move_dir.x);
+            let current_angle = if spider.current_rotation + PI / 2.0 > 2.0 * PI {
+                spider.current_rotation + PI / 2.0 - 2.0 * PI
+            } else {
+                spider.current_rotation + PI / 2.0
+            };
+            let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
+            let base_transform_mat = Mat3::from_cols(spider_plane.left, -spider_plane.plane.xyz(),  spider_plane_up);
+            println!("{:?}", current_angle);
+            if (current_angle - angle).abs() < 0.05 || (current_angle - angle - 2.0 * PI).abs() < 0.05 {
+                // move
+                spider_transform.translation = spider_transform.translation + move_dir * time.delta_seconds() * 0.8;
+            } else {
+                // rotate
+                let angular_velocity = 2.8 * PI * time.delta_seconds();
+
+                let new_angle = if (current_angle - angle).abs() < (current_angle - angle - 2.0 * PI).abs() {
+                    current_angle + angular_velocity * (angle - current_angle).signum()
+                } else {
+                    current_angle + angular_velocity * -(angle - current_angle).signum()
+                };
+                spider.current_rotation = new_angle - PI/2.0;
+                spider_transform.rotation = Quat::from_axis_angle(-spider_plane.plane.xyz(), spider.current_rotation) * Quat::from_mat3(&base_transform_mat);
+            }
+
+
+
+
         }
     }
 }
@@ -105,15 +123,18 @@ fn spawn_spider(
     mut commands: Commands,
     asset_server: ResMut<AssetServer>,
     mut _camera_transform_query: Query<(&mut Transform, &Camera)>,
+    spider_plane: Res<WebPlane>,
 ) {
     let start_pos = Vec3::new(-2.0, 0.0, 0.0);
+    let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
+    let base_transform_mat = bevy::math::mat3(spider_plane.left, -spider_plane.plane.xyz(), spider_plane_up);
     commands.spawn((
         Spider::new(10.0, start_pos),
         SceneBundle {
             scene: asset_server.load("spider.glb#Scene0"),
             transform: Transform {
-                translation: Vec3::new(0.0, 0.0, 0.0),
-                rotation: Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0),
+                translation: start_pos,
+                rotation: Quat::from_mat3(&base_transform_mat),
                 scale: Vec3::new(0.1, 0.1, 0.1),
             },
             global_transform: Default::default(),
