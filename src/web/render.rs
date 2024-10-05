@@ -6,6 +6,10 @@ use bevy::{
     },
 };
 
+use super::Web;
+
+pub const WEB_SILK_THICKNESS: f32 = 0.025;
+
 #[derive(Component)]
 pub struct WebSegment(Handle<Mesh>);
 
@@ -14,6 +18,7 @@ pub fn clear_web(
     mut meshes: ResMut<Assets<Mesh>>,
     web_segments_query: Query<(Entity, &WebSegment)>,
 ) {
+    // TODO: lets validate that we only have one web entity per frame..
     for (web_segment_entity, WebSegment(web_segment_mesh_handle)) in web_segments_query.iter() {
         meshes.remove(web_segment_mesh_handle);
         commands.entity(web_segment_entity).despawn();
@@ -24,9 +29,21 @@ pub fn render_web(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    web_data_query: Query<&Web>,
+    camera_query: Query<(&Transform, &Camera)>,
     time: Res<Time>,
 ) {
-    let mesh_handle: Handle<Mesh> = meshes.add(create_cube_mesh());
+    let Ok(web_data) = web_data_query.get_single() else {
+        println!("ERROR NO WEB OR MORE THAN ONE WEB");
+        return;
+    };
+
+    let Ok((camera_transform, _)) = camera_query.get_single() else {
+        println!("ERROR NO CAMERA OR MORE THAN ONE CAMERA");
+        return;
+    };
+
+    let mesh_handle: Handle<Mesh> = meshes.add(create_web_mesh(&web_data, camera_transform));
 
     let t = (time.elapsed_seconds() / 4.0).min(1.0);
 
@@ -43,142 +60,81 @@ pub fn render_web(
     ));
 }
 
-fn create_cube_mesh() -> Mesh {
-    // Keep the mesh data accessible in future frames to be able to mutate it in toggle_texture.
+fn create_web_mesh(web_data: &Web, camera_transform: &Transform) -> Mesh {
+    let mut positions: Vec<Vec3> = Vec::new();
+    let mut normals: Vec<Vec3> = Vec::new();
+    let mut uvs: Vec<Vec2> = Vec::new();
+
+    let mut indices: Vec<u32> = Vec::new();
+
+    for spring in &web_data.springs {
+        let first_index = spring.first_index;
+        let second_index = spring.second_index;
+        let first_position = web_data.particles[first_index].position;
+        let second_position = web_data.particles[second_index].position;
+        let center_position = (first_position + second_position) / 2.0;
+
+        let to_camera = (camera_transform.translation - center_position).normalize();
+        let segment_direction = second_position - first_position;
+        let perp = segment_direction.cross(to_camera).normalize();
+        let top_left = first_position + perp * WEB_SILK_THICKNESS / 2.0;
+        let top_right = first_position - perp * WEB_SILK_THICKNESS / 2.0;
+
+        let bottom_left = second_position + perp * WEB_SILK_THICKNESS / 2.0;
+        let bottom_right = second_position - perp * WEB_SILK_THICKNESS / 2.0;
+
+        let top_left_index = positions.len();
+        let top_right_index = top_left_index + 1;
+        let bottom_left_index = top_left_index + 2;
+        let bottom_right_index = top_left_index + 3;
+
+        positions.push(top_left);
+        positions.push(top_right);
+        positions.push(bottom_left);
+        positions.push(bottom_right);
+
+        normals.push(to_camera);
+        normals.push(to_camera);
+        normals.push(to_camera);
+        normals.push(to_camera);
+
+        uvs.push(Vec2::new(0.0, 0.0));
+        uvs.push(Vec2::new(1.0, 0.0));
+        uvs.push(Vec2::new(0.0, 1.0));
+        uvs.push(Vec2::new(1.0, 1.0));
+
+        // triangle 1
+        indices.push(bottom_left_index.try_into().unwrap());
+        indices.push(top_right_index.try_into().unwrap());
+        indices.push(top_left_index.try_into().unwrap());
+
+        // triangle 2
+        indices.push(bottom_left_index.try_into().unwrap());
+        indices.push(bottom_right_index.try_into().unwrap());
+        indices.push(top_right_index.try_into().unwrap());
+    }
+
     Mesh::new(
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
     )
     .with_inserted_attribute(
         Mesh::ATTRIBUTE_POSITION,
-        // Each array is an [x, y, z] coordinate in local space.
-        // The camera coordinate space is right-handed x-right, y-up, z-back. This means "forward" is -Z.
-        // Meshes always rotate around their local [0, 0, 0] when a rotation is applied to their Transform.
-        // By centering our mesh around the origin, rotating the mesh preserves its center of mass.
-        vec![
-            // top (facing towards +y)
-            [-0.5, 0.5, -0.5], // vertex with index 0
-            [0.5, 0.5, -0.5],  // vertex with index 1
-            [0.5, 0.5, 0.5],   // etc. until 23
-            [-0.5, 0.5, 0.5],
-            // bottom   (-y)
-            [-0.5, -0.5, -0.5],
-            [0.5, -0.5, -0.5],
-            [0.5, -0.5, 0.5],
-            [-0.5, -0.5, 0.5],
-            // right    (+x)
-            [0.5, -0.5, -0.5],
-            [0.5, -0.5, 0.5],
-            [0.5, 0.5, 0.5], // This vertex is at the same position as vertex with index 2, but they'll have different UV and normal
-            [0.5, 0.5, -0.5],
-            // left     (-x)
-            [-0.5, -0.5, -0.5],
-            [-0.5, -0.5, 0.5],
-            [-0.5, 0.5, 0.5],
-            [-0.5, 0.5, -0.5],
-            // back     (+z)
-            [-0.5, -0.5, 0.5],
-            [-0.5, 0.5, 0.5],
-            [0.5, 0.5, 0.5],
-            [0.5, -0.5, 0.5],
-            // forward  (-z)
-            [-0.5, -0.5, -0.5],
-            [-0.5, 0.5, -0.5],
-            [0.5, 0.5, -0.5],
-            [0.5, -0.5, -0.5],
-        ],
+        positions
+            .iter()
+            .map(|position| position.to_array())
+            .collect::<Vec<_>>(),
     )
-    // Set-up UV coordinates to point to the upper (V < 0.5), "dirt+grass" part of the texture.
-    // Take a look at the custom image (assets/textures/array_texture.png)
-    // so the UV coords will make more sense
-    // Note: (0.0, 0.0) = Top-Left in UV mapping, (1.0, 1.0) = Bottom-Right in UV mapping
-    .with_inserted_attribute(
-        Mesh::ATTRIBUTE_UV_0,
-        vec![
-            // Assigning the UV coords for the top side.
-            [0.0, 0.2],
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 0.2],
-            // Assigning the UV coords for the bottom side.
-            [0.0, 0.45],
-            [0.0, 0.25],
-            [1.0, 0.25],
-            [1.0, 0.45],
-            // Assigning the UV coords for the right side.
-            [1.0, 0.45],
-            [0.0, 0.45],
-            [0.0, 0.2],
-            [1.0, 0.2],
-            // Assigning the UV coords for the left side.
-            [1.0, 0.45],
-            [0.0, 0.45],
-            [0.0, 0.2],
-            [1.0, 0.2],
-            // Assigning the UV coords for the back side.
-            [0.0, 0.45],
-            [0.0, 0.2],
-            [1.0, 0.2],
-            [1.0, 0.45],
-            // Assigning the UV coords for the forward side.
-            [0.0, 0.45],
-            [0.0, 0.2],
-            [1.0, 0.2],
-            [1.0, 0.45],
-        ],
-    )
-    // For meshes with flat shading, normals are orthogonal (pointing out) from the direction of
-    // the surface.
-    // Normals are required for correct lighting calculations.
-    // Each array represents a normalized vector, which length should be equal to 1.0.
     .with_inserted_attribute(
         Mesh::ATTRIBUTE_NORMAL,
-        vec![
-            // Normals for the top side (towards +y)
-            [0.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0],
-            // Normals for the bottom side (towards -y)
-            [0.0, -1.0, 0.0],
-            [0.0, -1.0, 0.0],
-            [0.0, -1.0, 0.0],
-            [0.0, -1.0, 0.0],
-            // Normals for the right side (towards +x)
-            [1.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            // Normals for the left side (towards -x)
-            [-1.0, 0.0, 0.0],
-            [-1.0, 0.0, 0.0],
-            [-1.0, 0.0, 0.0],
-            [-1.0, 0.0, 0.0],
-            // Normals for the back side (towards +z)
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, 1.0],
-            // Normals for the forward side (towards -z)
-            [0.0, 0.0, -1.0],
-            [0.0, 0.0, -1.0],
-            [0.0, 0.0, -1.0],
-            [0.0, 0.0, -1.0],
-        ],
+        normals
+            .iter()
+            .map(|normal| normal.to_array())
+            .collect::<Vec<_>>(),
     )
-    // Create the triangles out of the 24 vertices we created.
-    // To construct a square, we need 2 triangles, therefore 12 triangles in total.
-    // To construct a triangle, we need the indices of its 3 defined vertices, adding them one
-    // by one, in a counter-clockwise order (relative to the position of the viewer, the order
-    // should appear counter-clockwise from the front of the triangle, in this case from outside the cube).
-    // Read more about how to correctly build a mesh manually in the Bevy documentation of a Mesh,
-    // further examples and the implementation of the built-in shapes.
-    .with_inserted_indices(Indices::U32(vec![
-        0, 3, 1, 1, 3, 2, // triangles making up the top (+y) facing side.
-        4, 5, 7, 5, 6, 7, // bottom (-y)
-        8, 11, 9, 9, 11, 10, // right (+x)
-        12, 13, 15, 13, 14, 15, // left (-x)
-        16, 19, 17, 17, 19, 18, // back (+z)
-        20, 21, 23, 21, 22, 23, // forward (-z)
-    ]))
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_UV_0,
+        uvs.iter().map(|uv| uv.to_array()).collect::<Vec<_>>(),
+    )
+    .with_inserted_indices(Indices::U32(indices))
 }

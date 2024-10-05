@@ -1,6 +1,7 @@
 mod render;
 mod spring;
 
+use std::f32::consts::PI;
 use crate::{tree::get_arena_center, web::spring::Spring};
 use bevy::prelude::*;
 use render::{clear_web, render_web};
@@ -41,6 +42,11 @@ impl Plugin for WebSimulationPlugin {
 
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
+    let web = generate_web(5, 7, 1.0);
+    commands.spawn(web);
+}
+
+fn generate_2_particle_example() -> Web {
     let arena_center = get_arena_center();
     let mut web: Web = Default::default();
     web.particles.push(Particle {
@@ -64,7 +70,54 @@ fn spawn_simulation(mut commands: Commands) {
         damping: 1.0,
         rest_length: 1.0,
     });
-    commands.spawn(web);
+    web
+}
+
+fn generate_web(row_count: usize, col_count: usize, size: f32) -> Web {
+    let arena_center = get_arena_center();
+    let mut web: Web = Default::default();
+    let mass = 0.3;
+    web.particles.push(Particle {
+        position: arena_center,
+        velocity: Default::default(),
+        force: Default::default(),
+        mass,
+        pinned: false,
+    });
+    for i in 0..row_count {
+        for j in 0..col_count {
+            let left = if i == 0 { 0 } else { web.particles.len() - col_count };
+            let prev = web.particles.len() - 1;
+
+            let r = (i as f32 + 1.0) / row_count as f32 * size;
+            let θ = j as f32 / col_count as f32 * 2.0 * PI;
+
+            let dir = Vec3::new(θ.cos(), θ.sin(), 0.0);
+
+            let pos = arena_center + dir * r;
+
+            web.particles.push(Particle {
+                position: pos,
+                velocity: Default::default(),
+                force: Default::default(),
+                mass,
+                pinned: i == row_count - 1,
+            });
+
+            let new = web.particles.len() - 1;
+
+            web.springs.push(Spring::new(&web, new, left, 400.0, 1.0));
+
+            if i != row_count - 1 && j != 0 {
+                web.springs.push(Spring::new(&web, new, prev, 400.0, 1.0));
+            }
+
+            if j == col_count - 1 {
+                web.springs.push(Spring::new(&web, new, web.particles.len() - col_count, 400.0, 1.0));
+            }
+        }
+    }
+    web
 }
 
 fn update_simulation(mut query: Query<(&mut Web)>, time: Res<Time>) {

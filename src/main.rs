@@ -1,4 +1,5 @@
 use crate::game::GamePlugin;
+use crate::spider::SpiderPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::prelude::*;
 use bevy::render::render_resource::{AddressMode, FilterMode, SamplerDescriptor};
@@ -7,12 +8,11 @@ use bevy::render::texture::{ImageAddressMode, ImageFilterMode, ImageSamplerDescr
 use bevy::render::RenderPlugin;
 use bevy::{window, DefaultPlugins};
 use tree::TreePlugin;
-use crate::spider::SpiderPlugin;
 
 mod game;
-mod web;
-mod tree;
 mod spider;
+mod tree;
+mod web;
 
 fn main() {
     let mut app = App::new();
