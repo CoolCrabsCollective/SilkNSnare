@@ -1,8 +1,9 @@
 mod ensnare;
 mod render;
-mod spring;
+pub(crate) mod spring;
 
-use crate::{tree::get_arena_center, web::spring::Spring};
+use crate::tree::get_arena_center;
+use crate::web::spring::Spring;
 use bevy::prelude::*;
 use ensnare::{debug_ensnare_entities, update_ensnared_entities};
 use render::{clear_web, render_web};
@@ -22,6 +23,7 @@ pub struct Particle {
 pub struct Web {
     pub particles: Vec<Particle>,
     pub springs: Vec<Spring>,
+    pub mass_per_unit_length: f32,
 }
 
 impl Default for Web {
@@ -29,7 +31,19 @@ impl Default for Web {
         Web {
             particles: vec![],
             springs: vec![],
+            mass_per_unit_length: 0.1,
         }
+    }
+}
+
+impl Web {
+    pub(crate) fn get_particle_index(&self, pos: Vec3, ε: f32) -> Option<usize> {
+        for i in 0..self.particles.len() {
+            if self.particles[i].position.distance_squared(pos) < ε * ε {
+                return Some(i);
+            }
+        }
+        None
     }
 }
 
@@ -48,7 +62,7 @@ impl Plugin for WebSimulationPlugin {
 
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
-    let web = generate_web(5, 7, 1.0);
+    let web = generate_web(2, 6, 1.0, 200.0, 200.0, 0.5);
     commands.spawn(web);
 }
 
@@ -59,14 +73,14 @@ fn generate_2_particle_example() -> Web {
         position: arena_center + Vec3::new(0.0, 0.0, 0.0),
         velocity: Default::default(),
         force: Default::default(),
-        mass: 1.0,
+        mass: 0.0,
         pinned: false,
     });
     web.particles.push(Particle {
         position: arena_center + Vec3::new(0.0, 1.0, 0.0),
         velocity: Default::default(),
         force: Default::default(),
-        mass: 1.0,
+        mass: 0.0,
         pinned: true,
     });
     web.springs.push(Spring {
@@ -80,15 +94,22 @@ fn generate_2_particle_example() -> Web {
     web
 }
 
-fn generate_web(row_count: usize, col_count: usize, size: f32) -> Web {
+fn generate_web(
+    row_count: usize,
+    col_count: usize,
+    size: f32,
+    mass_density: f32,
+    stiffness: f32,
+    damping: f32,
+) -> Web {
     let arena_center = get_arena_center();
     let mut web: Web = Default::default();
-    let mass = 0.3;
+    web.mass_per_unit_length = mass_density;
     web.particles.push(Particle {
         position: arena_center,
         velocity: Default::default(),
         force: Default::default(),
-        mass,
+        mass: 0.0,
         pinned: false,
     });
     for i in 0..row_count {
@@ -111,16 +132,18 @@ fn generate_web(row_count: usize, col_count: usize, size: f32) -> Web {
                 position: pos,
                 velocity: Default::default(),
                 force: Default::default(),
-                mass,
+                mass: 0.0,
                 pinned: i == row_count - 1,
             });
 
             let new = web.particles.len() - 1;
 
-            web.springs.push(Spring::new(&web, new, left, 400.0, 1.0));
+            web.springs
+                .push(Spring::new(&web, new, left, stiffness, damping));
 
             if i != row_count - 1 && j != 0 {
-                web.springs.push(Spring::new(&web, new, prev, 400.0, 1.0));
+                web.springs
+                    .push(Spring::new(&web, new, prev, stiffness, damping));
             }
 
             if j == col_count - 1 {
@@ -128,8 +151,8 @@ fn generate_web(row_count: usize, col_count: usize, size: f32) -> Web {
                     &web,
                     new,
                     web.particles.len() - col_count,
-                    400.0,
-                    1.0,
+                    stiffness,
+                    damping,
                 ));
             }
         }
@@ -139,12 +162,13 @@ fn generate_web(row_count: usize, col_count: usize, size: f32) -> Web {
 
 fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
     let h = time.delta_seconds();
+    let air_damping = 0.5;
     for mut web in &mut query {
         for i in 0..web.particles.len() {
             if web.particles[i].pinned {
                 continue;
             }
-
+            web.particles[i].mass = 0.0;
             web.particles[i].force = Vec3::new(0.0, -9.81 * web.particles[i].mass, 0.0);
         }
 
@@ -154,9 +178,13 @@ fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
             let p2 = web.springs[j].second_index;
             if !web.particles[p1].pinned {
                 web.particles[p1].force += force;
+                web.particles[p1].mass +=
+                    web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
             }
             if !web.particles[p2].pinned {
                 web.particles[p2].force -= force;
+                web.particles[p2].mass +=
+                    web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
             }
         }
 
@@ -164,6 +192,8 @@ fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
             if particle.pinned {
                 continue;
             }
+
+            particle.force += particle.velocity * -air_damping;
 
             particle.velocity += particle.force / particle.mass * h;
             particle.position += particle.velocity * h;
