@@ -63,7 +63,7 @@ fn move_spider(
                 println!("Cursor is not in the game window.");
             }
         }
-        spider_transform.rotation = Quat::from_axis_angle(spider_plane.plane.xyz(), 90.0);
+        //spider_transform.rotation = Quat::from_axis_angle(spider_plane.plane.xyz(), 90.0);
 
 
         spider_transform.translation = spider.target_position;
