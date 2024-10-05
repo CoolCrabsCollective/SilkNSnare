@@ -144,16 +144,16 @@ fn generate_web(
             if i != row_count - 1 && j != 0 {
                 web.springs
                     .push(Spring::new(&web, new, prev, stiffness, damping));
-            }
 
-            if j == col_count - 1 {
-                web.springs.push(Spring::new(
-                    &web,
-                    new,
-                    web.particles.len() - col_count,
-                    stiffness,
-                    damping,
-                ));
+                if j == col_count - 1 {
+                    web.springs.push(Spring::new(
+                        &web,
+                        new,
+                        web.particles.len() - col_count,
+                        stiffness,
+                        damping,
+                    ));
+                }
             }
         }
     }
