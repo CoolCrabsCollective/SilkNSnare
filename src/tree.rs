@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-
+use bevy::prelude::Visibility::Hidden;
 use crate::game::get_initial_camera_transform;
 
 pub struct TreePlugin;
