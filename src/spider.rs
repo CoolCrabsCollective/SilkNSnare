@@ -90,15 +90,23 @@ fn move_spider(
         } else {
 
             let move_dir = (spider.target_position - spider_transform.translation).normalize();
-            let angle = move_dir.y.atan2(move_dir.x);
+            let raw_angle = move_dir.y.atan2(move_dir.x);
+            let angle = if raw_angle < 0.0 {
+                raw_angle + 2.0 * PI
+            } else {
+                raw_angle
+            };
+
             let current_angle = if spider.current_rotation + PI / 2.0 > 2.0 * PI {
                 spider.current_rotation + PI / 2.0 - 2.0 * PI
             } else {
                 spider.current_rotation + PI / 2.0
             };
+
             let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
             let base_transform_mat = Mat3::from_cols(spider_plane.left, -spider_plane.plane.xyz(),  spider_plane_up);
-            //println!("{:?}", current_angle);
+
+
             if (current_angle - angle).abs() < 0.05 || (current_angle - angle - 2.0 * PI).abs() < 0.05 {
                 // move
                 spider_transform.translation = spider_transform.translation + move_dir * time.delta_seconds() * 0.8;
@@ -106,12 +114,17 @@ fn move_spider(
                 // rotate
                 let angular_velocity = 2.8 * PI * time.delta_seconds();
 
-                let new_angle = if (current_angle - angle).abs() < (current_angle - angle - 2.0 * PI).abs() {
+                let new_angle = if (current_angle - angle).abs() < ((current_angle - angle).abs() - 2.0 * PI).abs() {
                     current_angle + angular_velocity * (angle - current_angle).signum()
                 } else {
                     current_angle + angular_velocity * -(angle - current_angle).signum()
                 };
-                spider.current_rotation = new_angle - PI/2.0;
+                spider.current_rotation = if new_angle - PI/2.0 < 0.0 {
+                    new_angle - PI / 2.0 + 2.0 * PI
+                } else {
+                    new_angle - PI/2.0
+                };
+
                 spider_transform.rotation = Quat::from_axis_angle(-spider_plane.plane.xyz(), spider.current_rotation) * Quat::from_mat3(&base_transform_mat);
             }
 
