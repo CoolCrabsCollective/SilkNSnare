@@ -7,6 +7,7 @@ use bevy::{
     render::mesh::{Indices, VertexAttributeValues},
 };
 use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group};
+use std::any::Any;
 
 use crate::config::{
     COLLISION_GROUP_ENEMIES, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN, COLLISION_GROUP_WALLS,
@@ -40,12 +41,13 @@ fn handle_gltf_load_event(
     asset_server: Res<AssetServer>,
 ) {
     for event in load_events.read() {
-        if let AssetEvent::Added { id: handle } = event {
-            println!("Asset Added event");
-            match asset_server.get_load_state(handle.untyped()) {
+        if let AssetEvent::Added { id: asset_id } = event {
+            println!("Asset Added event: {:?}", asset_id);
+            println!("Untyped asset_id: {:?}", asset_id.untyped());
+            match asset_server.get_load_state(asset_id.untyped()) {
                 Some(LoadState::Loaded) => {
                     println!("Loaded");
-                    if let Some(scene) = assets.get(*handle) {
+                    if let Some(scene) = assets.get(*asset_id) {
                         println!("Got Scene");
                         for (name, node_handle) in &scene.named_nodes {
                             println!("{}", name);
