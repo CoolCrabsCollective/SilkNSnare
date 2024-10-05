@@ -2,6 +2,7 @@ use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
 use bevy::math::NormedVectorSpace;
 use bevy::{prelude::*, window::PrimaryWindow};
+use bevy_rapier3d::na::ComplexField;
 use std::f32::consts::PI;
 
 pub const NNN: bool = false; // currently october, set this to true in november
@@ -130,13 +131,30 @@ fn move_spider(
             } else {
                 // rotate
                 let angular_velocity = 2.8 * PI * time.delta_seconds();
-
                 let new_angle = if (current_angle - angle).abs()
                     < ((current_angle - angle).abs() - 2.0 * PI).abs()
                 {
-                    current_angle + angular_velocity * (angle - current_angle).signum()
+                    let diff_sign = (current_angle - angle).signum();
+                    let updated_angle =
+                        current_angle + angular_velocity * (angle - current_angle).signum();
+                    let new_diff_sign = (updated_angle - angle).signum();
+
+                    if diff_sign != new_diff_sign {
+                        angle
+                    } else {
+                        updated_angle
+                    }
                 } else {
-                    current_angle + angular_velocity * -(angle - current_angle).signum()
+                    let diff_sign = (current_angle - angle).signum();
+                    let updated_angle =
+                        current_angle + angular_velocity * -(angle - current_angle).signum();
+                    let new_diff_sign = (updated_angle - angle).signum();
+
+                    if diff_sign != new_diff_sign {
+                        angle
+                    } else {
+                        updated_angle
+                    }
                 };
                 spider.current_rotation = if new_angle - PI / 2.0 < 0.0 {
                     new_angle - PI / 2.0 + 2.0 * PI
