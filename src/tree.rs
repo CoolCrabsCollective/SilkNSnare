@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::game::get_initial_camera_transform;
+
 pub struct TreePlugin;
 
 impl Plugin for TreePlugin {
@@ -21,8 +23,10 @@ fn spawn_tree(
 }
 
 fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, time: Res<Time>) {
+    let t = (time.elapsed_seconds() / 2.0).min(1.0);
     if let Ok((mut camera_transform, _)) = camera_transform_query.get_single_mut() {
-        camera_transform.translation = get_target_camera_position();
+        camera_transform.translation = ((1.0 - t) * get_initial_camera_transform().translation)
+            + t * get_target_camera_position();
     }
 }
 
