@@ -1,3 +1,4 @@
+use crate::web::ensnare::split_ensnared_entities_for_spring_split;
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
 use bevy::math::NormedVectorSpace;
@@ -38,7 +39,7 @@ impl Plugin for SpiderPlugin {
         app.add_systems(Startup, spawn_spider);
         app.add_systems(Update, move_spider);
         app.insert_resource(WebPlane {
-            plane: Vec4::new(0.0, 0.0, -1.0, 0.25),
+            plane: Vec4::new(0.0, 0.0, -1.0, 0.0),
             left: Vec3::new(0.0, 1.0, 0.0),
         });
     }
@@ -207,20 +208,25 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
                 mass: 0.0,
                 pinned: false,
             });
-            let spring: Spring = web.springs.swap_remove(spring_idx.unwrap());
+            let old_spring: Spring = web.springs.swap_remove(spring_idx.unwrap());
+            let (new_spring_1_ensnared_entities, new_spring_2_ensnared_entities) =
+                split_ensnared_entities_for_spring_split(web, &old_spring, spider.target_position);
+
             web.springs.push(Spring::new(
                 web,
+                old_spring.first_index,
                 web.particles.len() - 1,
-                spring.first_index,
                 20.0,
                 0.5,
+                new_spring_1_ensnared_entities,
             ));
             web.springs.push(Spring::new(
                 web,
                 web.particles.len() - 1,
-                spring.second_index,
+                old_spring.second_index,
                 20.0,
                 0.5,
+                new_spring_2_ensnared_entities,
             ));
 
             web.particles.len() - 1
@@ -228,7 +234,8 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
             existing_p2.unwrap()
         };
 
-        web.springs.push(Spring::new(web, p1, p2, 20.0, 0.5));
+        web.springs
+            .push(Spring::new(web, p1, p2, 20.0, 0.5, vec![]));
     }
 }
 
