@@ -67,7 +67,7 @@ fn spawn_simulation(mut commands: Commands) {
     commands.spawn(web);
 }
 
-fn update_simulation(mut query: Query<(&mut Web)>, time: Res<Time>) {
+fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
     let h = time.delta_seconds();
     for mut web in &mut query {
         for i in 0..web.particles.len() {

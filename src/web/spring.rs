@@ -15,24 +15,6 @@ pub struct Spring {
 }
 
 impl Spring {
-    pub fn new(
-        web: &Web,
-        first_index: usize,
-        second_index: usize,
-        stiffness: f32,
-        damping: f32,
-    ) -> Self {
-        Spring {
-            first_index,
-            second_index,
-            stiffness,
-            damping,
-            rest_length: (web.particles[first_index].position
-                - web.particles[second_index].position)
-                .length(),
-        }
-    }
-
     pub fn get_force_p1(self: &Spring, web: &Web) -> Vec3 {
         let p_diff =
             web.particles[self.first_index].position - web.particles[self.second_index].position;

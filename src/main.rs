@@ -2,11 +2,10 @@ use crate::game::GamePlugin;
 use crate::spider::SpiderPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::prelude::*;
-use bevy::render::render_resource::{AddressMode, FilterMode, SamplerDescriptor};
-use bevy::render::settings::{WgpuFeatures, WgpuSettings};
+use bevy::render::render_resource::{AddressMode, FilterMode};
 use bevy::render::texture::{ImageAddressMode, ImageFilterMode, ImageSamplerDescriptor};
 use bevy::render::RenderPlugin;
-use bevy::{window, DefaultPlugins};
+use bevy::DefaultPlugins;
 use tree::TreePlugin;
 
 mod game;

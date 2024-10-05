@@ -1,6 +1,4 @@
-use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
-use std::cmp::max;
+use bevy::{prelude::*, window::PrimaryWindow};
 
 pub struct SpiderPlugin;
 
@@ -40,7 +38,7 @@ fn move_spider(
     q_windows: Query<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
-    time: Res<Time>,
+    _time: Res<Time>,
     spider_plane: Res<WebPlane>,
 ) {
     if let Ok((mut spider, mut spider_transform)) = spider_query.get_single_mut() {
@@ -67,7 +65,7 @@ fn move_spider(
 fn spawn_spider(
     mut commands: Commands,
     asset_server: ResMut<AssetServer>,
-    mut camera_transform_query: Query<(&mut Transform, &Camera)>,
+    mut _camera_transform_query: Query<(&mut Transform, &Camera)>,
 ) {
     let start_pos = Vec3::new(-2.0, 0.0, 0.0);
     commands.spawn((

@@ -1,7 +1,4 @@
-use std::f32::consts::PI;
-
 use crate::web::WebSimulationPlugin;
-use bevy::math::{vec3, VectorSpace};
 use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::prelude::Projection::Perspective;
 use bevy::prelude::*;
@@ -22,7 +19,7 @@ impl Plugin for GamePlugin {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
-        .insert_resource(ClearColor(Color::rgb(0.3, 0.6, 0.9)))
+        .insert_resource(ClearColor(Color::srgb(0.3, 0.6, 0.9)))
         .insert_resource(DirectionalLightShadowMap { size: 4096 });
 
         //app.add_plugins(DebugCameraControllerPlugin);
@@ -32,9 +29,9 @@ impl Plugin for GamePlugin {
 /// set up a simple 3D scene
 fn setup(
     mut commands: Commands,
-    mut asset_server: ResMut<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut _asset_server: ResMut<AssetServer>,
+    mut _meshes: ResMut<Assets<Mesh>>,
+    mut _materials: ResMut<Assets<StandardMaterial>>,
 ) {
     //load_level("map.glb#Scene0", &mut commands, &asset_server);
     /*
