@@ -15,8 +15,23 @@ pub struct Spring {
 }
 
 impl Spring {
-    pub fn intersects(&self, p0: Vec3, p1: Vec3) -> Option<Vec3> {
-        None
+    pub fn intersects(&self, web: &Web, cam_dir: Vec3, p1: Vec3, p2: Vec3) -> Option<Vec3> {
+        let sp1 = web.particles[self.first_index].position;
+        let sp2 = web.particles[self.second_index].position;
+
+        let n1 = cam_dir.cross(sp2 - sp1);
+        let n2 = cam_dir.cross(p2 - p1);
+
+        let p1d1 = n1.dot(p1) - n1.dot(sp1) < 0.0;
+        let p1d2 = n1.dot(p2) - n1.dot(sp2) < 0.0;
+        let p2d1 = n2.dot(sp1) - n2.dot(p1) < 0.0;
+        let p2d2 = n2.dot(sp2) - n2.dot(p2) < 0.0;
+
+        if p1d1 == p1d2 || p2d1 == p2d2 {
+            return None
+        }
+
+        Some((sp1 + sp2) / 2.0)
     }
 }
 
