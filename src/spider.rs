@@ -1,12 +1,22 @@
+use bevy::math::DVec4;
 use bevy::prelude::*;
 
 pub struct SpiderPlugin;
+
+
+#[derive(Resource)]
+struct WebPlane {
+    plane: DVec4 // ax + by + cz + d = 0
+}
+
+
 
 
 impl Plugin for SpiderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_spider);
         app.add_systems(Update, move_spider);
+        app.insert_resource(WebPlane { plane: DVec4::new(0.0, 0.0, -1.0, 0.0) });
     }
 }
 fn move_spider(mut camera_transform_query: Query<(&mut Transform, &Camera)>, time: Res<Time>) {
@@ -26,7 +36,7 @@ fn spawn_spider(
     commands.spawn(SceneBundle {
         scene: asset_server.load("spider.glb#Scene0"),
         transform: Transform{
-            translation: Vec3::new(0.0, 0.0, 2.0),
+            translation: Vec3::new(0.0, 0.0, -2.0),
             rotation: Quat::default(),
             scale: Vec3::new(0.25, 0.25, 0.25),
         },
