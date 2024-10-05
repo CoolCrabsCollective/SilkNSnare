@@ -79,9 +79,16 @@ fn move_spider(
             let result = spring.intersects(web,
                                            Vec3::new(0.0, 0.0, -1.0),
                                            spider_transform.translation, spider.target_position);
-            if result.is_some() {
-                spider.target_position = result.unwrap();
+            if result.is_none() {
+                continue
             }
+
+            let new_pos = result.unwrap();
+            if new_pos.distance_squared(spider_transform.translation) < 0.1 * 0.1 {
+                continue
+            }
+
+            spider.target_position = new_pos;
         }
 
 
