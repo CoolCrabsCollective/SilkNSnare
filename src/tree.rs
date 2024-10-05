@@ -1,6 +1,5 @@
-use bevy::prelude::*;
-use bevy::prelude::Visibility::Hidden;
 use crate::game::get_initial_camera_transform;
+use bevy::prelude::*;
 
 pub struct TreePlugin;
 
@@ -12,10 +11,12 @@ impl Plugin for TreePlugin {
 }
 
 fn spawn_tree(mut commands: Commands, asset_server: ResMut<AssetServer>) {
-    commands.spawn(SceneBundle {
-        scene: asset_server.load("tree.glb#Scene0"),
-        ..default()
-    });
+    commands.spawn(
+        (SceneBundle {
+            scene: asset_server.load("tree.glb#Scene0"),
+            ..default()
+        }),
+    );
 }
 
 fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, time: Res<Time>) {
@@ -28,7 +29,7 @@ fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, ti
 }
 
 pub fn get_target_camera_position() -> Vec3 {
-    Vec3::new(-1.75, 0.5, 1.75)
+    Vec3::new(-2.0, 0.5, 1.75)
 }
 
 pub fn get_arena_center() -> Vec3 {

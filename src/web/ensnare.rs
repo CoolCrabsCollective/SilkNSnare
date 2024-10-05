@@ -28,7 +28,7 @@ pub fn debug_ensnare_entities(
     mut web_query: Query<&mut Web>,
 ) {
     let Ok(mut web_data) = web_query.get_single_mut() else {
-        log::error!("ERROR NO WEB OR MORE THAN ONE WEB");
+        error!("ERROR NO WEB OR MORE THAN ONE WEB");
         return;
     };
 
