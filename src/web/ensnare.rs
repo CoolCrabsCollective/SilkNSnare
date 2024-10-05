@@ -101,8 +101,6 @@ pub fn split_ensnared_entities_for_spring_split(
                 .length()
                 / (split_position - web.particles[old_spring.first_index].position).length();
 
-            dbg!(ensnared.snare_position, snare_position);
-
             EnsnaredEntity {
                 entity: ensnared.entity.clone(),
                 snare_position,
@@ -118,17 +116,6 @@ pub fn split_ensnared_entities_for_spring_split(
 
             let snare_position = (ensnared_position_world_space - split_position).length()
                 / (web.particles[old_spring.second_index].position - split_position).length();
-
-            dbg!(
-                ensnared_position_world_space,
-                split_position,
-                web.particles[old_spring.first_index].position,
-                web.particles[old_spring.second_index].position,
-                ensnared_position_world_space - split_position,
-                web.particles[old_spring.second_index].position - split_position,
-                ensnared.snare_position,
-                snare_position
-            );
 
             EnsnaredEntity {
                 entity: ensnared.entity.clone(),

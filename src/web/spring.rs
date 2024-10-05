@@ -86,6 +86,25 @@ impl Spring {
         }
     }
 
+    pub fn new_with_length(
+        web: &Web,
+        first_index: usize,
+        second_index: usize,
+        stiffness: f32,
+        damping: f32,
+        rest_length: f32,
+        ensnared_entities: Vec<EnsnaredEntity>,
+    ) -> Self {
+        Spring {
+            first_index,
+            second_index,
+            stiffness,
+            damping,
+            rest_length: rest_length,
+            ensnared_entities,
+        }
+    }
+
     pub fn get_force_p1(self: &Spring, web: &Web) -> Vec3 {
         let p_diff =
             web.particles[self.first_index].position - web.particles[self.second_index].position;

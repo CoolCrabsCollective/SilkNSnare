@@ -3,6 +3,7 @@ use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
 use bevy::math::NormedVectorSpace;
 use bevy::{prelude::*, window::PrimaryWindow};
+use bevy_rapier3d::na::ComplexField;
 use std::f32::consts::PI;
 
 pub const NNN: bool = false; // currently october, set this to true in november
@@ -64,7 +65,6 @@ fn move_spider(
                     let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                     let p = ray.origin + ray.direction * λ;
 
-                    spider.target_position = p;
                     set_new_target(
                         p,
                         &mut *spider,
@@ -75,27 +75,6 @@ fn move_spider(
             } else {
                 println!("Cursor is not in the game window.");
             }
-        }
-
-        let web = web_query.single();
-
-        for spring in &web.springs {
-            let result = spring.intersects(
-                web,
-                Vec3::new(0.0, 0.0, -1.0),
-                spider_transform.translation,
-                spider.target_position,
-            );
-            if result.is_none() {
-                continue;
-            }
-
-            let new_pos = result.unwrap();
-            if new_pos.distance_squared(spider_transform.translation) < 0.1 * 0.1 {
-                continue;
-            }
-
-            spider.target_position = new_pos;
         }
 
         if (spider_transform.translation - spider.target_position).norm() < 1e-2 {
@@ -131,13 +110,30 @@ fn move_spider(
             } else {
                 // rotate
                 let angular_velocity = 2.8 * PI * time.delta_seconds();
-
                 let new_angle = if (current_angle - angle).abs()
                     < ((current_angle - angle).abs() - 2.0 * PI).abs()
                 {
-                    current_angle + angular_velocity * (angle - current_angle).signum()
+                    let diff_sign = (current_angle - angle).signum();
+                    let updated_angle =
+                        current_angle + angular_velocity * (angle - current_angle).signum();
+                    let new_diff_sign = (updated_angle - angle).signum();
+
+                    if diff_sign != new_diff_sign {
+                        angle
+                    } else {
+                        updated_angle
+                    }
                 } else {
-                    current_angle + angular_velocity * -(angle - current_angle).signum()
+                    let diff_sign = (current_angle - angle).signum();
+                    let updated_angle =
+                        current_angle + angular_velocity * -(angle - current_angle).signum();
+                    let new_diff_sign = (updated_angle - angle).signum();
+
+                    if diff_sign != new_diff_sign {
+                        angle
+                    } else {
+                        updated_angle
+                    }
                 };
                 spider.current_rotation = if new_angle - PI / 2.0 < 0.0 {
                     new_angle - PI / 2.0 + 2.0 * PI
@@ -162,81 +158,112 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
 
     let mut spring_idx: Option<usize> = None;
 
+    let move_dir = (spider.target_position - spider_transform.translation).normalize();
+
     for i in 0..web.springs.len() {
         let spring = &web.springs[i];
         let result = spring.intersects(
             web,
             Vec3::new(0.0, 0.0, -1.0),
             spider_transform.translation,
-            spider.target_position,
+            spider.target_position + move_dir * 10.0,
         );
+
         if result.is_none() {
             continue;
         }
 
         let new_pos = result.unwrap();
-        if new_pos.distance_squared(spider_transform.translation) < 0.1 * 0.1 {
+
+        if new_pos.dot(move_dir) - spider_transform.translation.dot(move_dir) < 0.1 {
             continue;
         }
 
+        if new_pos.dot(move_dir) >= spider.target_position.dot(move_dir) {
+            continue;
+        }
         spider.target_position = new_pos;
         spring_idx = Some(i);
     }
 
-    if spring_idx.is_some() {
-        let existing_p1 = web.get_particle_index(spider_transform.translation, 0.2);
-        let existing_p2 = web.get_particle_index(spider.target_position, 0.2);
-
-        let p1 = if existing_p1.is_none() {
-            web.particles.push(Particle {
-                position: spider_transform.translation,
-                velocity: Default::default(),
-                force: Default::default(),
-                mass: 0.0,
-                pinned: true,
-            });
-            web.particles.len() - 1
-        } else {
-            existing_p1.unwrap()
-        };
-
-        let p2 = if existing_p2.is_none() {
-            web.particles.push(Particle {
-                position: spider.target_position,
-                velocity: Default::default(),
-                force: Default::default(),
-                mass: 0.0,
-                pinned: false,
-            });
-            let old_spring: Spring = web.springs.swap_remove(spring_idx.unwrap());
-            let (new_spring_1_ensnared_entities, new_spring_2_ensnared_entities) =
-                split_ensnared_entities_for_spring_split(web, &old_spring, spider.target_position);
-
-            web.springs.push(Spring::new(
-                web,
-                old_spring.first_index,
-                web.particles.len() - 1,
-                20.0,
-                0.5,
-                new_spring_1_ensnared_entities,
-            ));
-            web.springs.push(Spring::new(
-                web,
-                web.particles.len() - 1,
-                old_spring.second_index,
-                20.0,
-                0.5,
-                new_spring_2_ensnared_entities,
-            ));
-
-            web.particles.len() - 1
-        } else {
-            existing_p2.unwrap()
-        };
-
-        web.springs
-            .push(Spring::new(web, p1, p2, 20.0, 0.5, vec![]));
+    if spring_idx.is_none() {
+        println!("No spring found in front of target position, moving out the web");
+        return;
     }
+
+    let existing_p1 = web.get_particle_index(spider_transform.translation, 0.2);
+    let existing_p2 = web.get_particle_index(spider.target_position, 0.2);
+
+    if existing_p1 == existing_p2 && existing_p1.is_some() {
+        println!("Destination and current position are the same particle!");
+        return;
+    }
+
+    if existing_p1.is_some()
+        && existing_p2.is_some()
+        && web.has_spring(existing_p1.unwrap(), existing_p2.unwrap())
+    {
+        println!("Path is along existing spring");
+        return;
+    }
+
+    let p1 = if existing_p1.is_none() {
+        web.particles.push(Particle {
+            position: spider_transform.translation,
+            velocity: Default::default(),
+            force: Default::default(),
+            mass: 0.0,
+            pinned: true,
+        });
+        web.particles.len() - 1
+    } else {
+        existing_p1.unwrap()
+    };
+
+    let p2 = if existing_p2.is_none() {
+        web.particles.push(Particle {
+            position: spider.target_position,
+            velocity: Default::default(),
+            force: Default::default(),
+            mass: 0.0,
+            pinned: false,
+        });
+
+        let old_spring: Spring = web.springs.swap_remove(spring_idx.unwrap());
+        let t = (spider.target_position - web.particles[old_spring.first_index].position).length()
+            / (web.particles[old_spring.second_index].position
+                - web.particles[old_spring.first_index].position)
+                .length();
+
+        let (new_spring_1_ensnared_entities, new_spring_2_ensnared_entities) =
+            split_ensnared_entities_for_spring_split(web, &old_spring, spider.target_position);
+
+        web.springs.push(Spring::new_with_length(
+            web,
+            old_spring.first_index,
+            web.particles.len() - 1,
+            20.0,
+            0.5,
+            old_spring.rest_length * t,
+            new_spring_1_ensnared_entities,
+        ));
+        web.springs.push(Spring::new_with_length(
+            web,
+            web.particles.len() - 1,
+            old_spring.second_index,
+            20.0,
+            0.5,
+            old_spring.rest_length * (1.0 - t),
+            new_spring_2_ensnared_entities,
+        ));
+
+        web.particles.len() - 1
+    } else {
+        existing_p2.unwrap()
+    };
+
+    web.springs
+        .push(Spring::new(web, p1, p2, 20.0, 0.5, vec![]));
 }
 
 fn spawn_spider(
@@ -245,7 +272,7 @@ fn spawn_spider(
     mut _camera_transform_query: Query<(&mut Transform, &Camera)>,
     spider_plane: Res<WebPlane>,
 ) {
-    let start_pos = Vec3::new(-2.0, 0.0, 0.0);
+    let start_pos = Vec3::new(-1.95, -0.1, 0.0);
     let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
     let base_transform_mat = bevy::math::mat3(
         spider_plane.left,
