@@ -62,7 +62,7 @@ impl Plugin for WebSimulationPlugin {
 
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
-    let web = generate_web(2, 6, 1.0, 200.0, 200.0, 0.5);
+    let web = generate_web(2, 6, 1.0, 0.1, 20.0, 0.5);
     commands.spawn(web);
 }
 
@@ -169,7 +169,7 @@ fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
                 continue;
             }
             web.particles[i].mass = 0.0;
-            web.particles[i].force = Vec3::new(0.0, -9.81 * web.particles[i].mass, 0.0);
+            web.particles[i].force = Vec3::new(0.0, 0.0, 0.0);
         }
 
         for j in 0..web.springs.len() {
@@ -193,6 +193,7 @@ fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
                 continue;
             }
 
+            particle.force.y -= 9.81 * particle.mass;
             particle.force += particle.velocity * -air_damping;
 
             particle.velocity += particle.force / particle.mass * h;

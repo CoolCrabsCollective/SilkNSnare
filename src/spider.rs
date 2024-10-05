@@ -4,7 +4,7 @@ use bevy::math::NormedVectorSpace;
 use bevy::{prelude::*, window::PrimaryWindow};
 use std::f32::consts::PI;
 
-pub const NNN: bool = true;
+pub const NNN: bool = false; // currently october, set this to true in november
 
 pub struct SpiderPlugin;
 
@@ -212,15 +212,15 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
                 web,
                 web.particles.len() - 1,
                 spring.first_index,
-                400.0,
-                1.0,
+                20.0,
+                0.5,
             ));
             web.springs.push(Spring::new(
                 web,
                 web.particles.len() - 1,
                 spring.second_index,
-                400.0,
-                1.0,
+                20.0,
+                0.5,
             ));
 
             web.particles.len() - 1
@@ -228,7 +228,7 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
             existing_p2.unwrap()
         };
 
-        web.springs.push(Spring::new(web, p1, p2, 400.0, 1.0));
+        web.springs.push(Spring::new(web, p1, p2, 20.0, 0.5));
     }
 }
 
