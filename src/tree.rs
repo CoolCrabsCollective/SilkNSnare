@@ -11,11 +11,7 @@ impl Plugin for TreePlugin {
     }
 }
 
-fn spawn_tree(
-    mut commands: Commands,
-    asset_server: ResMut<AssetServer>,
-    mut camera_transform_query: Query<(&mut Transform, &Camera)>,
-) {
+fn spawn_tree(mut commands: Commands, asset_server: ResMut<AssetServer>) {
     commands.spawn(SceneBundle {
         scene: asset_server.load("tree.glb#Scene0"),
         ..default()

@@ -5,7 +5,7 @@ use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::prelude::Projection::Perspective;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-
+use crate::web::WebSimulationPlugin;
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
@@ -15,6 +15,7 @@ impl Plugin for GamePlugin {
         app.add_plugins((
             RapierPhysicsPlugin::<NoUserData>::default(),
             RapierDebugRenderPlugin::default().disabled(),
+            WebSimulationPlugin
         ))
         //.add_systems(Update, debug_render_toggle)
         .insert_resource(AmbientLight {
@@ -91,7 +92,7 @@ pub fn get_initial_camera_transform() -> Transform {
 }
 
 fn get_initial_sun_transform() -> Transform {
-    let mut res = get_initial_camera_transform();
+    let res = get_initial_camera_transform();
     res.with_translation(res.translation + Vec3::new(0.0, 0.0, 10.0))
 }
 

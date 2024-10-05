@@ -10,6 +10,7 @@ use tree::TreePlugin;
 use crate::spider::SpiderPlugin;
 
 mod game;
+mod web;
 mod tree;
 mod spider;
 
