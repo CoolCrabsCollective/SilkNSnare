@@ -31,6 +31,10 @@ fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, ti
     }
 }
 
+pub fn 树里有点吗(点: Vec3) -> bool {
+    (get_arena_center() - 点).length_squared() > 1.0
+}
+
 pub fn get_target_camera_position() -> Vec3 {
     Vec3::new(-2.0, 0.5, 1.75)
 }

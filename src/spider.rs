@@ -1,3 +1,4 @@
+use crate::tree::树里有点吗;
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
 use bevy::{prelude::*, window::PrimaryWindow};
@@ -106,7 +107,7 @@ fn update_spider(
     let result = spider_query.get_single_mut();
 
     if !result.is_ok() {
-        println!("FUCK");
+        println!("F U C K");
         return;
     }
 
@@ -225,6 +226,13 @@ fn set_new_target(mut target_position: Vec3, spider: &mut Spider, web: &mut Web)
         return;
     }
 
+    if (树里有点吗(position) && 树里有点吗(target_position)) {
+        println!("Tree to Tree movement, no silk");
+        spider.current_position = SpiderPosition::TREE(position);
+        spider.target_position = SpiderPosition::TREE(target_position);
+        return;
+    }
+
     let mut dest_spring_idx: Option<usize> = None;
     let mut from_spring_idx: Option<usize> = match spider.current_position {
         SpiderPosition::WEB(idx, _) => Some(idx),
@@ -272,8 +280,7 @@ fn set_new_target(mut target_position: Vec3, spider: &mut Spider, web: &mut Web)
     }
 
     if dest_spring_idx.is_none() && from_spring_idx.is_none() {
-        println!("Moving from off-web to off-web");
-        spider.target_position = SpiderPosition::TREE(target_position);
+        //panic!("THIS SHOULD NEVER HAPPEN IF THIS HAPPEN DESTROY YOUR PC AND ANY OTHER EVIDENCE OF IT HAPPENING");
         return;
     }
 
