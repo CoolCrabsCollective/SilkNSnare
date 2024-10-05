@@ -9,6 +9,7 @@ use bevy::render::texture::{ImageAddressMode, ImageFilterMode, ImageSamplerDescr
 use crate::game::GamePlugin;
 
 mod game;
+mod web;
 
 fn main() {
 
