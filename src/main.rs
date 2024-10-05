@@ -9,7 +9,9 @@ use bevy::DefaultPlugins;
 use tree::TreePlugin;
 use crate::fruit_fly::FruitFlyPlugin;
 
+mod config;
 mod game;
+mod level_loaders;
 mod spider;
 mod tree;
 mod web;

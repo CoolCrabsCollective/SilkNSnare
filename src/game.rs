@@ -3,6 +3,7 @@ use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::prelude::Projection::Perspective;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use std::f32::consts::PI;
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
@@ -45,24 +46,35 @@ fn setup(
         ..default()
     });*/
 
+    commands.insert_resource(AmbientLight {
+        color: Color::WHITE,
+        brightness: 500.0,
+    });
+
+    // directional 'sun' light
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
+            illuminance: light_consts::lux::FULL_DAYLIGHT,
             shadows_enabled: true,
-            illuminance: 10000.0,
             ..default()
         },
-        transform: get_initial_sun_transform(),
-        // This is a relatively small scene, so use tighter shadow
-        // cascade bounds than the default for better quality.
-        // We also adjusted the shadow map to be larger since we're
-        // only using a single cascade.
+        transform: Transform {
+            translation: Vec3::new(0.0, 2.0, 0.0),
+            rotation: Quat::from_rotation_x(-PI / 4.),
+            ..default()
+        },
+        // The default cascade config is designed to handle large scenes.
+        // As this example has a much smaller world, we can tighten the shadow
+        // bounds for better visual quality.
         cascade_shadow_config: CascadeShadowConfigBuilder {
-            maximum_distance: 100.0,
+            first_cascade_far_bound: 4.0,
+            maximum_distance: 10.0,
             ..default()
         }
         .into(),
         ..default()
     });
+
     // camera
     commands.spawn(Camera3dBundle {
         camera: Camera {
@@ -90,7 +102,7 @@ pub fn get_initial_camera_transform() -> Transform {
 
 fn get_initial_sun_transform() -> Transform {
     let res = get_initial_camera_transform();
-    res.with_translation(res.translation + Vec3::new(0.0, 0.0, 10.0))
+    res.with_translation(res.translation + Vec3::new(0.0, 25.0, 1.75))
         .looking_at(Vec3::ZERO, Vec3::Y)
 }
 
