@@ -1,30 +1,63 @@
-use bevy::math::DVec4;
+use std::cmp::max;
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 
 pub struct SpiderPlugin;
 
 
 #[derive(Resource)]
 struct WebPlane {
-    plane: DVec4 // ax + by + cz + d = 0
+    plane: Vec4 // ax + by + cz + d = 0
 }
 
+#[derive(Component)]
+struct Spider {
+    food: f64,
+    max_food: f64,
+    target_position: Vec3,
+}
 
-
+impl Spider {
+    pub fn new(max_food: f64, target_position: Vec3) -> Self {
+        Spider {
+            food: max_food,
+            max_food,
+            target_position,
+        }
+    }
+}
 
 impl Plugin for SpiderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_spider);
         app.add_systems(Update, move_spider);
-        app.insert_resource(WebPlane { plane: DVec4::new(0.0, 0.0, -1.0, 0.0) });
+        app.insert_resource(WebPlane { plane: Vec4::new(0.0, 0.0, -1.0, 0.0) });
     }
 }
-fn move_spider(mut camera_transform_query: Query<(&mut Transform, &Camera)>, time: Res<Time>) {
-    // let t = (time.elapsed_seconds() / 2.0).min(1.0);
-    // if let Ok((mut camera_transform, _)) = camera_transform_query.get_single_mut() {
-    //     camera_transform.translation = ((1.0 - t) * get_initial_camera_transform().translation)
-    //         + t * crate::tree::get_target_camera_position();
-    // }
+fn move_spider( q_windows: Query<&Window, With<PrimaryWindow>>, camera_query: Query<(&Camera)>, buttons: Res<ButtonInput<MouseButton>>, time: Res<Time>, spider_plane: Res<WebPlane>) {
+    //let (&mut spider, spider_transform) = spider_query.single_mut();
+    if buttons.just_pressed(MouseButton::Left) {
+        if let Some(position) = q_windows.single().cursor_position() {
+            println!("Cursor is inside the primary window, at {:?}", position);
+            let camera = camera_query.single();
+
+            let global_transform_default: GlobalTransform = GlobalTransform::default();
+            if let Some(ray) = camera.viewport_to_world(&global_transform_default, position)
+            {
+                let n = spider_plane.plane.xyz();
+                let d = spider_plane.plane.w;
+
+                let lambda = -(n.dot(ray.origin) + d)/(n.dot(*ray.direction));
+                let p = ray.origin + ray.direction * lambda;
+
+                //spider.target_position = p;
+            }
+        } else {
+            println!("Cursor is not in the game window.");
+        }
+    }
+
+    //spider_transform.translation = spider.target_position;
 }
 
 fn spawn_spider(
@@ -33,13 +66,14 @@ fn spawn_spider(
     mut camera_transform_query: Query<(&mut Transform, &Camera)>,
 )
 {
-    commands.spawn(SceneBundle {
+    let start_pos = Vec3::new(-2.0, 0.0, 0.0);
+    commands.spawn((SceneBundle {
         scene: asset_server.load("spider.glb#Scene0"),
         transform: Transform{
-            translation: Vec3::new(0.0, 0.0, -2.0),
-            rotation: Quat::default(),
+            translation: Vec3::new(-2.0, 0.0, 0.0),
+            rotation: Quat::from_euler(EulerRot::YXZ, 90.0, 0.0, 90.0),
             scale: Vec3::new(0.25, 0.25, 0.25),
         },
         ..default()
-    });
+    }));
 }
