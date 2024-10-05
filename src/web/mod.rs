@@ -3,6 +3,7 @@ mod spring;
 
 use crate::{tree::get_arena_center, web::spring::Spring};
 use bevy::prelude::*;
+use render::{clear_web, render_web};
 
 pub struct WebSimulationPlugin;
 
@@ -23,7 +24,8 @@ pub struct Web {
 impl Default for Web {
     fn default() -> Self {
         Web {
-            particles: vec![], springs: vec![],
+            particles: vec![],
+            springs: vec![],
         }
     }
 }
@@ -31,6 +33,8 @@ impl Default for Web {
 impl Plugin for WebSimulationPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, update_simulation);
+        app.add_systems(Update, clear_web);
+        app.add_systems(Update, render_web.after(clear_web));
         app.add_systems(Startup, spawn_simulation);
     }
 }
@@ -40,14 +44,14 @@ fn spawn_simulation(mut commands: Commands) {
     let arena_center = get_arena_center();
     let mut web: Web = Default::default();
     web.particles.push(Particle {
-        position: arena_center +Vec3::new(0.0, 0.0, 0.0),
+        position: arena_center + Vec3::new(0.0, 0.0, 0.0),
         velocity: Default::default(),
         force: Default::default(),
         mass: 1.0,
         pinned: false,
     });
     web.particles.push(Particle {
-        position: arena_center +Vec3::new(0.0, 1.0, 0.0),
+        position: arena_center + Vec3::new(0.0, 1.0, 0.0),
         velocity: Default::default(),
         force: Default::default(),
         mass: 1.0,
@@ -63,8 +67,7 @@ fn spawn_simulation(mut commands: Commands) {
     commands.spawn(web);
 }
 
-fn update_simulation(mut query: Query<(&mut Web)>,
-                     time: Res<Time>) {
+fn update_simulation(mut query: Query<(&mut Web)>, time: Res<Time>) {
     let h = time.delta_seconds();
     for mut web in &mut query {
         for i in 0..web.particles.len() {
