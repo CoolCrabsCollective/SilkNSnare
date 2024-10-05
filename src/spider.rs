@@ -1,11 +1,14 @@
+use std::f32::consts::PI;
 use crate::web::Web;
 use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::math::NormedVectorSpace;
 
 pub struct SpiderPlugin;
 
 #[derive(Resource)]
 struct WebPlane {
     plane: Vec4, // ax + by + cz + d = 0
+    left: Vec3,
 }
 
 #[derive(Component)]
@@ -29,9 +32,8 @@ impl Plugin for SpiderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_spider);
         app.add_systems(Update, move_spider);
-        app.insert_resource(WebPlane {
-            plane: Vec4::new(0.0, 0.0, -1.0, 0.25),
-        });
+        app.insert_resource(WebPlane { plane: Vec4::new(0.0, 0.0, -1.0, 0.25), left: Vec3::new(0.0, 1.0, 0.0) });
+
     }
 }
 fn move_spider(
@@ -39,7 +41,7 @@ fn move_spider(
     q_windows: Query<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
-    _time: Res<Time>,
+    time: Res<Time>,
     web_query: Query<&mut Web>,
     spider_plane: Res<WebPlane>,
 ) {
@@ -54,24 +56,48 @@ fn move_spider(
                     let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                     let p = ray.origin + ray.direction * λ;
                     spider.target_position = p;
+                    
+                    let direction_vec = spider.target_position - spider_transform.translation;
+                    let angle = direction_vec.y.atan2(direction_vec.x);
 
-                    let new_direction = spider.target_position - spider_transform.translation;
-                    // assumes 0,0,-1 plane
-                    let _angle = new_direction.y.atan2(new_direction.x);
-                }
+                    let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
+
+                    let base_transform_mat = Mat3::from_cols(spider_plane.left, -spider_plane.plane.xyz(),  spider_plane_up);
+
+                    spider_transform.rotation = Quat::from_axis_angle(-spider_plane.plane.xyz(), angle - PI/2.0) * Quat::from_mat3(&base_transform_mat);
+
+
+                 }
             } else {
                 println!("Cursor is not in the game window.");
             }
         }
-        //spider_transform.rotation = Quat::from_axis_angle(spider_plane.plane.xyz(), 90.0);
+
 
         let web = web_query.single();
 
         for spring in &web.springs {
-            if spring.intersects(spider_transform.translation, spider.target_position) {}
+            let result = spring.intersects(web,
+                                           Vec3::new(0.0, 0.0, -1.0),
+                                           spider_transform.translation, spider.target_position);
+            if result.is_none() {
+                continue
+            }
+
+            let new_pos = result.unwrap();
+            if new_pos.distance_squared(spider_transform.translation) < 0.1 * 0.1 {
+                continue
+            }
+
+            spider.target_position = new_pos;
         }
 
-        spider_transform.translation = spider.target_position;
+        if (spider_transform.translation - spider.target_position).norm() < 1e-2 {
+            spider_transform.translation = spider.target_position;
+        } else {
+            let move_dir = (spider.target_position - spider_transform.translation).normalize();
+            spider_transform.translation = spider_transform.translation + move_dir * time.delta_seconds() * 0.8;
+        }
     }
 }
 
@@ -88,7 +114,7 @@ fn spawn_spider(
             transform: Transform {
                 translation: Vec3::new(0.0, 0.0, 0.0),
                 rotation: Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0),
-                scale: Vec3::new(0.25, 0.25, 0.25),
+                scale: Vec3::new(0.1, 0.1, 0.1),
             },
             global_transform: Default::default(),
             visibility: Default::default(),

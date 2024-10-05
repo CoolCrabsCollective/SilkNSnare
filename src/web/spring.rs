@@ -15,8 +15,47 @@ pub struct Spring {
 }
 
 impl Spring {
-    pub fn intersects(&self, p0: Vec3, p1: Vec3) -> bool {
-        false
+    pub fn intersects(&self, web: &Web, cam_dir: Vec3, p1: Vec3, p2: Vec3) -> Option<Vec3> {
+        let sp1 = web.particles[self.first_index].position;
+        let sp2 = web.particles[self.second_index].position;
+
+        let d1 = sp2 - sp1;
+        let d2 = p2 - p1;
+
+        let n1 = cam_dir.cross(d1);
+        let n2 = cam_dir.cross(d2);
+
+        let p1d1 = n1.dot(p1) - n1.dot(sp1) < 0.0;
+        let p1d2 = n1.dot(p2) - n1.dot(sp2) < 0.0;
+        let p2d1 = n2.dot(sp1) - n2.dot(p1) < 0.0;
+        let p2d2 = n2.dot(sp2) - n2.dot(p2) < 0.0;
+
+        if p1d1 == p1d2 || p2d1 == p2d2 {
+            return None
+        }
+
+        let mut t2: f32;
+
+        // p1 + t1 * d1 = p2 + t2 * d2
+        // t1 * d1_x = (p2_x - p1_x) + t2 * d2_x
+        // t1 * d1_y = (p2_y - p1_y) + t2 * d2_y
+        // ((p2_y - p1_y) + t2 * d2_y) * d1_x / d1_y = (p2_x - p1_x) + t2 * d2_x
+        // (p2_y - p1_y) * d1_x / d1_y + t2 * d2_y * d1_x / d1_y = (p2_x - p1_x) + t2 * d2_x
+        // (p2_y - p1_y) * d1_x / d1_y - (p2_x - p1_x) = t2 * d2_x - t2 * d2_y * d1_x / d1_y
+        // (p2_y - p1_y) * d1_x / d1_y - (p2_x - p1_x) = t2 * (1 * d2_x - 1 * d2_y * d1_x / d1_y)
+        // t2 = ((p2_y - p1_y) * d1_x / d1_y - (p2_x - p1_x)) / (d2_x - d2_y * d1_x / d1_y)
+        // or
+        // t2 = ((p2_x - p1_x) * d1_y / d1_x - (p2_y - p1_y)) / (d2_y - d2_x * d1_y / d1_x)
+
+        if d1.x == 0.0 {
+            t2 = (sp1.x - p1.x) / d2.x;
+        } else if d1.y == 0.0 {
+            t2 = (sp1.y - p1.y) / d2.y;
+        } else {
+            t2 = ((p1.x - sp1.x) * d1.y / d1.x - (p1.y - sp1.y)) / (d2.y - d2.x * d1.y / d1.x);
+        }
+
+        Some(p1 + d2 * t2)
     }
 }
 
