@@ -31,13 +31,12 @@ impl Plugin for SpiderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_spider);
         app.add_systems(Update, move_spider);
-        app.insert_resource(WebPlane { plane: Vec4::new(0.0, 0.0, -1.0, -0.25) });
+        app.insert_resource(WebPlane { plane: Vec4::new(0.0, 0.0, -1.0, 0.25) });
     }
 }
 fn move_spider(mut spider_query: Query<(&mut Spider, &mut Transform)>, q_windows: Query<&Window, With<PrimaryWindow>>, camera_query: Query<(&Camera, &GlobalTransform)>, buttons: Res<ButtonInput<MouseButton>>, time: Res<Time>, spider_plane: Res<WebPlane>) {
     if let Ok((mut spider, mut spider_transform)) = spider_query.get_single_mut()
     {
-
         if buttons.just_pressed(MouseButton::Left) {
             if let Some(position) = q_windows.single().cursor_position() {
                 let (camera, camera_global_transform) = camera_query.single();
@@ -49,11 +48,19 @@ fn move_spider(mut spider_query: Query<(&mut Spider, &mut Transform)>, q_windows
                     let lambda = -(n.dot(ray.origin) + d)/(n.dot(*ray.direction));
                     let p = ray.origin + ray.direction * lambda;
                     spider.target_position = p;
-                }
+
+                    let new_direction = spider.target_position - spider_transform.translation;
+                    // assumes 0,0,-1 plane
+                    let angle = new_direction.y.atan2(new_direction.x);
+
+
+                 }
             } else {
                 println!("Cursor is not in the game window.");
             }
         }
+        spider_transform.rotation = Quat::from_axis_angle(spider_plane.plane.xyz(), 90.0);
+
 
         spider_transform.translation = spider.target_position;
     }
@@ -70,7 +77,7 @@ fn spawn_spider(
         scene: asset_server.load("spider.glb#Scene0"),
         transform: Transform{
             translation: Vec3::new(0.0, 0.0, 0.0),
-            rotation: Quat::from_euler(EulerRot::YXZ, 90.0, 0.0, 90.0),
+            rotation: Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0),
             scale: Vec3::new(0.25, 0.25, 0.25),
         },
         ..default()
