@@ -6,6 +6,7 @@ pub struct SpiderPlugin;
 #[derive(Resource)]
 struct WebPlane {
     plane: Vec4, // ax + by + cz + d = 0
+    left: Vec3,
 }
 
 #[derive(Component)]
@@ -29,9 +30,8 @@ impl Plugin for SpiderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_spider);
         app.add_systems(Update, move_spider);
-        app.insert_resource(WebPlane {
-            plane: Vec4::new(0.0, 0.0, -1.0, 0.25),
-        });
+        app.insert_resource(WebPlane { plane: Vec4::new(0.0, 0.0, -1.0, 0.25), left: Vec3::new(-1.0, 0.0, 0.0) });
+
     }
 }
 fn move_spider(
@@ -56,14 +56,22 @@ fn move_spider(
                     spider.target_position = p;
 
                     let new_direction = spider.target_position - spider_transform.translation;
-                    // assumes 0,0,-1 plane
-                    let _angle = new_direction.y.atan2(new_direction.x);
-                }
+
+                    let angle = new_direction.y.atan2(new_direction.x);
+
+
+                 }
             } else {
                 println!("Cursor is not in the game window.");
             }
         }
-        //spider_transform.rotation = Quat::from_axis_angle(spider_plane.plane.xyz(), 90.0);
+
+        let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
+
+        let transform_mat = Mat3::from_cols(spider_plane.left, spider_plane.plane.xyz(), spider_plane_up);
+
+
+        //spider_transform.rotation = Quat::from_mat3(&transform_mat);
 
         let web = web_query.single();
 
