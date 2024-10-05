@@ -5,6 +5,7 @@ use bevy_rapier3d::na::ComplexField;
 use std::f32::consts::PI;
 
 pub const NNN: bool = false; // currently october, set this to true in november
+pub const SPIDER_ROTATE_SPEED: f32 = 5.6;
 
 pub struct SpiderPlugin;
 
@@ -112,7 +113,9 @@ fn update_spider(
     let (mut spider, mut spider_transform) = result.unwrap();
     let web = &mut *web_query.single_mut();
 
-    if buttons.just_pressed(MouseButton::Left) {
+    if buttons.just_pressed(MouseButton::Left)
+        && spider.current_position.同(&spider.target_position)
+    {
         if let Some(position) = q_windows.single().cursor_position() {
             let (camera, camera_global_transform) = camera_query.single();
 
@@ -183,7 +186,7 @@ fn rotate_spider(web: &Web, spider: &mut Spider, time: &Res<Time>) {
         // move
     } else {
         // rotate
-        let angular_velocity = 2.8 * PI * time.delta_seconds();
+        let angular_velocity = SPIDER_ROTATE_SPEED * PI * time.delta_seconds();
         let 新θ = if (current_angle - θ).abs() < ((current_angle - θ).abs() - 2.0 * PI).abs() {
             let diff_sign = (current_angle - θ).signum();
             let updated_angle = current_angle + angular_velocity * (θ - current_angle).signum();
@@ -217,12 +220,16 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
     let mut target_position = p;
 
     if NNN {
+        spider.current_position = SpiderPosition::TREE(spider_transform.translation);
         spider.target_position = SpiderPosition::TREE(target_position);
         return;
     }
 
     let mut dest_spring_idx: Option<usize> = None;
-    let mut from_spring_idx: Option<usize> = None;
+    let mut from_spring_idx: Option<usize> = match spider.current_position {
+        SpiderPosition::WEB(idx, _) => Some(idx),
+        SpiderPosition::TREE(_) => None,
+    };
 
     let move_dir = (target_position - spider_transform.translation).normalize();
     let mut closest_spring: Vec3 = spider_transform.translation - move_dir * 10.0;
@@ -261,9 +268,7 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
     let existing_p2 = web.get_particle_index(target_position, 0.1);
 
     if existing_p1 == existing_p2 && existing_p1.is_some() {
-        println!("[FUCK] Destination and current position are the same particle!");
-        spider.target_position = SpiderPosition::TREE(target_position);
-        return;
+        panic!("[FUCK] Destination and current position are the same particle!");
     }
 
     if dest_spring_idx.is_none() && from_spring_idx.is_none() {
@@ -306,7 +311,17 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
     };
 
     let p2 = if existing_p2.is_none() {
-        web.split_spring(dest_spring_idx.unwrap(), target_position);
+        if dest_spring_idx.is_none() {
+            web.particles.push(Particle {
+                position: target_position,
+                velocity: Default::default(),
+                force: Default::default(),
+                mass: 0.0,
+                pinned: true,
+            });
+        } else {
+            web.split_spring(dest_spring_idx.unwrap(), target_position);
+        }
         web.particles.len() - 1
     } else {
         existing_p2.unwrap()
