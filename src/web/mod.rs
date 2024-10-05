@@ -1,10 +1,12 @@
+mod ensnare;
 mod render;
 mod spring;
 
-use std::f32::consts::PI;
 use crate::{tree::get_arena_center, web::spring::Spring};
 use bevy::prelude::*;
+use ensnare::{debug_ensnare_entities, update_ensnared_entities};
 use render::{clear_web, render_web};
+use std::f32::consts::PI;
 
 pub struct WebSimulationPlugin;
 
@@ -33,10 +35,14 @@ impl Default for Web {
 
 impl Plugin for WebSimulationPlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(Startup, spawn_simulation);
         app.add_systems(Update, update_simulation);
+
         app.add_systems(Update, clear_web);
         app.add_systems(Update, render_web.after(clear_web));
-        app.add_systems(Startup, spawn_simulation);
+
+        app.add_systems(Startup, debug_ensnare_entities.after(spawn_simulation));
+        app.add_systems(Update, update_ensnared_entities);
     }
 }
 
@@ -69,6 +75,7 @@ fn generate_2_particle_example() -> Web {
         stiffness: 100.0,
         damping: 1.0,
         rest_length: 1.0,
+        ensnared_entities: vec![],
     });
     web
 }
@@ -86,7 +93,11 @@ fn generate_web(row_count: usize, col_count: usize, size: f32) -> Web {
     });
     for i in 0..row_count {
         for j in 0..col_count {
-            let left = if i == 0 { 0 } else { web.particles.len() - col_count };
+            let left = if i == 0 {
+                0
+            } else {
+                web.particles.len() - col_count
+            };
             let prev = web.particles.len() - 1;
 
             let r = (i as f32 + 1.0) / row_count as f32 * size;
@@ -113,7 +124,13 @@ fn generate_web(row_count: usize, col_count: usize, size: f32) -> Web {
             }
 
             if j == col_count - 1 {
-                web.springs.push(Spring::new(&web, new, web.particles.len() - col_count, 400.0, 1.0));
+                web.springs.push(Spring::new(
+                    &web,
+                    new,
+                    web.particles.len() - col_count,
+                    400.0,
+                    1.0,
+                ));
             }
         }
     }

@@ -1,6 +1,8 @@
 use crate::web::Web;
 use bevy::math::Vec3;
+use bevy::prelude::*;
 
+#[derive(Debug)]
 pub struct Spring {
     /// index of first particle
     pub first_index: usize,
@@ -12,6 +14,17 @@ pub struct Spring {
     pub damping: f32,
     /// length of the spring at rest
     pub rest_length: f32,
+    /// list of entities that are ensnared
+    pub ensnared_entities: Vec<EnsnaredEntity>,
+}
+
+#[derive(Debug)]
+pub struct EnsnaredEntity {
+    /// the entity that is snared in the web
+    pub entity: Entity,
+    /// the position along the spring at which it's ensnared.
+    ///  ranges from 0 (first particle) -> 1 (second particle)
+    pub snare_position: f32,
 }
 
 impl Spring {
@@ -31,7 +44,7 @@ impl Spring {
         let p2d2 = n2.dot(sp2) - n2.dot(p2) < 0.0;
 
         if p1d1 == p1d2 || p2d1 == p2d2 {
-            return None
+            return None;
         }
 
         let mut t2: f32;
@@ -75,6 +88,7 @@ impl Spring {
             rest_length: (web.particles[first_index].position
                 - web.particles[second_index].position)
                 .length(),
+            ensnared_entities: vec![],
         }
     }
 
