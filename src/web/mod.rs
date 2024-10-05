@@ -8,6 +8,8 @@ pub struct WebSimulationPlugin;
 
 pub struct Particle {
     pub position: Vec3,
+    pub velocity: Vec3,
+    pub mass: f32,
     pub pinned: bool
 }
 
@@ -34,10 +36,14 @@ impl Plugin for WebSimulationPlugin {
         let mut web: Web = Default::default();
         web.particles.push(Particle {
             position: Vec3::new(0.0, 0.0, 0.0),
+            velocity: Default::default(),
+            mass: 1.0,
             pinned: false,
         });
         web.particles.push(Particle {
             position: Vec3::new(0.0, 1.0, 0.0),
+            velocity: Default::default(),
+            mass: 1.0,
             pinned: true,
         });
         web.segments.push(Spring {
@@ -51,5 +57,10 @@ impl Plugin for WebSimulationPlugin {
 }
 
 fn update_simulation(mut query: Query<(&mut Web)>,) {
+    for mut web in &mut query {
+        for particle in &mut web.particles {
+            let mut force: f32 = 0.0;
 
+        }
+    }
 }
