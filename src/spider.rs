@@ -69,10 +69,13 @@ fn move_spider(
         let web = web_query.single();
 
         for spring in &web.springs {
-            if spring.intersects(spider_transform.translation, spider.target_position) {
-
+            let result = spring.intersects(spider_transform.translation,
+                                           spider.target_position);
+            if result.is_some() {
+                spider.target_position = result.unwrap();
             }
         }
+
 
         spider_transform.translation = spider.target_position;
     }

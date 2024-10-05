@@ -15,8 +15,8 @@ pub struct Spring {
 }
 
 impl Spring {
-    pub fn intersects(&self, p0: Vec3, p1: Vec3) -> bool {
-        false
+    pub fn intersects(&self, p0: Vec3, p1: Vec3) -> Option<Vec3> {
+        None
     }
 }
 
