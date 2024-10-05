@@ -2,6 +2,8 @@ use crate::web::Web;
 use bevy::math::Vec3;
 use bevy::prelude::*;
 
+use super::ensnare::EnsnaredEntity;
+
 #[derive(Debug)]
 pub struct Spring {
     /// index of first particle
@@ -16,15 +18,6 @@ pub struct Spring {
     pub rest_length: f32,
     /// list of entities that are ensnared
     pub ensnared_entities: Vec<EnsnaredEntity>,
-}
-
-#[derive(Debug)]
-pub struct EnsnaredEntity {
-    /// the entity that is snared in the web
-    pub entity: Entity,
-    /// the position along the spring at which it's ensnared.
-    ///  ranges from 0 (first particle) -> 1 (second particle)
-    pub snare_position: f32,
 }
 
 impl Spring {
@@ -79,6 +72,7 @@ impl Spring {
         second_index: usize,
         stiffness: f32,
         damping: f32,
+        ensnared_entities: Vec<EnsnaredEntity>,
     ) -> Self {
         Spring {
             first_index,
@@ -88,7 +82,26 @@ impl Spring {
             rest_length: (web.particles[first_index].position
                 - web.particles[second_index].position)
                 .length(),
-            ensnared_entities: vec![],
+            ensnared_entities,
+        }
+    }
+
+    pub fn new_with_length(
+        web: &Web,
+        first_index: usize,
+        second_index: usize,
+        stiffness: f32,
+        damping: f32,
+        rest_length: f32,
+        ensnared_entities: Vec<EnsnaredEntity>,
+    ) -> Self {
+        Spring {
+            first_index,
+            second_index,
+            stiffness,
+            damping,
+            rest_length: rest_length,
+            ensnared_entities,
         }
     }
 

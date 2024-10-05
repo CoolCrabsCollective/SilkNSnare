@@ -1,4 +1,4 @@
-mod ensnare;
+pub mod ensnare;
 mod render;
 pub mod spring;
 
@@ -152,11 +152,11 @@ fn generate_web(
             let new = web.particles.len() - 1;
 
             web.springs
-                .push(Spring::new(&web, new, left, stiffness, damping));
+                .push(Spring::new(&web, new, left, stiffness, damping, vec![]));
 
             if i != row_count - 1 && j != 0 {
                 web.springs
-                    .push(Spring::new(&web, new, prev, stiffness, damping));
+                    .push(Spring::new(&web, new, prev, stiffness, damping, vec![]));
 
                 if j == col_count - 1 {
                     web.springs.push(Spring::new(
@@ -165,6 +165,7 @@ fn generate_web(
                         web.particles.len() - col_count,
                         stiffness,
                         damping,
+                        vec![],
                     ));
                 }
             }
