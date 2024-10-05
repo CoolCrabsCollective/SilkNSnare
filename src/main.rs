@@ -9,6 +9,7 @@ use bevy::{window, DefaultPlugins};
 use tree::TreePlugin;
 
 mod game;
+mod web;
 mod tree;
 
 fn main() {
