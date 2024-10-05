@@ -1,4 +1,3 @@
-use crate::web::ensnare::split_ensnared_entities_for_spring_split;
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
 use bevy::math::NormedVectorSpace;
@@ -156,16 +155,18 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
         return;
     }
 
-    let mut spring_idx: Option<usize> = None;
+    let mut dest_spring_idx: Option<usize> = None;
+    let mut from_spring_idx: Option<usize> = None;
 
     let move_dir = (spider.target_position - spider_transform.translation).normalize();
+    let mut closest_spring: Vec3 = spider_transform.translation - move_dir * 10.0;
 
     for i in 0..web.springs.len() {
         let spring = &web.springs[i];
         let result = spring.intersects(
             web,
             Vec3::new(0.0, 0.0, -1.0),
-            spider_transform.translation,
+            spider_transform.translation - move_dir * 10.0,
             spider.target_position + move_dir * 10.0,
         );
 
@@ -175,27 +176,31 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
 
         let new_pos = result.unwrap();
 
-        if new_pos.dot(move_dir) - spider_transform.translation.dot(move_dir) < 0.1 {
-            continue;
+        if new_pos.dot(move_dir) - spider_transform.translation.dot(move_dir) > 0.1
+            && new_pos.dot(move_dir) < spider.target_position.dot(move_dir)
+        {
+            spider.target_position = new_pos;
+            dest_spring_idx = Some(i);
         }
 
-        if new_pos.dot(move_dir) >= spider.target_position.dot(move_dir) {
-            continue;
+        if (new_pos.dot(move_dir) - spider_transform.translation.dot(move_dir)).abs() < 0.1
+            && new_pos.dot(move_dir) < closest_spring.dot(move_dir)
+        {
+            closest_spring = new_pos;
+            from_spring_idx = Some(i);
         }
-        spider.target_position = new_pos;
-        spring_idx = Some(i);
     }
 
-    if spring_idx.is_none() {
-        println!("No spring found in front of target position, moving out the web");
+    let existing_p1 = web.get_particle_index(spider_transform.translation, 0.1);
+    let existing_p2 = web.get_particle_index(spider.target_position, 0.1);
+
+    if existing_p1 == existing_p2 && existing_p1.is_some() {
+        println!("[FUCK] Destination and current position are the same particle!");
         return;
     }
 
-    let existing_p1 = web.get_particle_index(spider_transform.translation, 0.2);
-    let existing_p2 = web.get_particle_index(spider.target_position, 0.2);
-
-    if existing_p1 == existing_p2 && existing_p1.is_some() {
-        println!("Destination and current position are the same particle!");
+    if dest_spring_idx.is_none() && from_spring_idx.is_none() {
+        println!("Moving from off-web to off-web");
         return;
     }
 
@@ -208,62 +213,38 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
     }
 
     let p1 = if existing_p1.is_none() {
-        web.particles.push(Particle {
-            position: spider_transform.translation,
-            velocity: Default::default(),
-            force: Default::default(),
-            mass: 0.0,
-            pinned: true,
-        });
+        if from_spring_idx.is_none() {
+            web.particles.push(Particle {
+                position: spider_transform.translation,
+                velocity: Default::default(),
+                force: Default::default(),
+                mass: 0.0,
+                pinned: true,
+            });
+        } else {
+            web.split_spring(from_spring_idx.unwrap(), spider_transform.translation);
+        }
         web.particles.len() - 1
     } else {
         existing_p1.unwrap()
     };
 
     let p2 = if existing_p2.is_none() {
-        web.particles.push(Particle {
-            position: spider.target_position,
-            velocity: Default::default(),
-            force: Default::default(),
-            mass: 0.0,
-            pinned: false,
-        });
-
-        let old_spring: Spring = web.springs.swap_remove(spring_idx.unwrap());
-        let t = (spider.target_position - web.particles[old_spring.first_index].position).length()
-            / (web.particles[old_spring.second_index].position
-                - web.particles[old_spring.first_index].position)
-                .length();
-
-        let (new_spring_1_ensnared_entities, new_spring_2_ensnared_entities) =
-            split_ensnared_entities_for_spring_split(web, &old_spring, spider.target_position);
-
-        web.springs.push(Spring::new_with_length(
-            web,
-            old_spring.first_index,
-            web.particles.len() - 1,
-            20.0,
-            0.5,
-            old_spring.rest_length * t,
-            new_spring_1_ensnared_entities,
-        ));
-        web.springs.push(Spring::new_with_length(
-            web,
-            web.particles.len() - 1,
-            old_spring.second_index,
-            20.0,
-            0.5,
-            old_spring.rest_length * (1.0 - t),
-            new_spring_2_ensnared_entities,
-        ));
-
+        web.split_spring(dest_spring_idx.unwrap(), spider.target_position);
         web.particles.len() - 1
     } else {
         existing_p2.unwrap()
     };
 
-    web.springs
-        .push(Spring::new(web, p1, p2, 20.0, 0.5, vec![]));
+    web.springs.push(Spring::new_with_length(
+        web,
+        p1,
+        p2,
+        20.0,
+        0.5,
+        (web.particles[p1].position - web.particles[p2].position).length() * 0.75,
+        vec![],
+    ));
 }
 
 fn spawn_spider(

@@ -3,6 +3,7 @@ mod render;
 pub mod spring;
 
 use crate::tree::get_arena_center;
+use crate::web::ensnare::split_ensnared_entities_for_spring_split;
 use crate::web::spring::Spring;
 use bevy::prelude::*;
 use ensnare::{debug_ensnare_entities, update_ensnared_entities};
@@ -50,13 +51,51 @@ impl Default for Web {
 }
 
 impl Web {
-    pub(crate) fn get_particle_index(&self, pos: Vec3, ε: f32) -> Option<usize> {
+    pub fn get_particle_index(&self, pos: Vec3, ε: f32) -> Option<usize> {
         for i in 0..self.particles.len() {
             if self.particles[i].position.distance_squared(pos) < ε * ε {
                 return Some(i);
             }
         }
         None
+    }
+
+    pub fn split_spring(&mut self, spring_index: usize, position: Vec3) {
+        self.particles.push(Particle {
+            position: position,
+            velocity: Default::default(),
+            force: Default::default(),
+            mass: 0.0,
+            pinned: false,
+        });
+
+        let old_spring: Spring = self.springs.swap_remove(spring_index);
+        let t = (position - self.particles[old_spring.first_index].position).length()
+            / (self.particles[old_spring.second_index].position
+                - self.particles[old_spring.first_index].position)
+                .length();
+
+        let (new_spring_1_ensnared_entities, new_spring_2_ensnared_entities) =
+            split_ensnared_entities_for_spring_split(&self, &old_spring, position);
+
+        self.springs.push(Spring::new_with_length(
+            self,
+            old_spring.first_index,
+            self.particles.len() - 1,
+            20.0,
+            0.5,
+            old_spring.rest_length * t,
+            new_spring_1_ensnared_entities,
+        ));
+        self.springs.push(Spring::new_with_length(
+            self,
+            self.particles.len() - 1,
+            old_spring.second_index,
+            20.0,
+            0.5,
+            old_spring.rest_length * (1.0 - t),
+            new_spring_2_ensnared_entities,
+        ));
     }
 }
 
