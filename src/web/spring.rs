@@ -15,6 +15,12 @@ pub struct Spring {
 }
 
 impl Spring {
+    pub fn intersects(&self, p0: Vec3, p1: Vec3) -> bool {
+        false
+    }
+}
+
+impl Spring {
     pub fn new(
         web: &Web,
         first_index: usize,
