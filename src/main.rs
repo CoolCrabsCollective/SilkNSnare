@@ -1,4 +1,6 @@
+use crate::fruit_fly::FruitFlyPlugin;
 use crate::game::GamePlugin;
+use crate::mesh_loader::MeshLoaderPlugin;
 use crate::spider::SpiderPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::prelude::*;
@@ -7,15 +9,14 @@ use bevy::render::texture::{ImageAddressMode, ImageFilterMode, ImageSamplerDescr
 use bevy::render::RenderPlugin;
 use bevy::DefaultPlugins;
 use tree::TreePlugin;
-use crate::fruit_fly::FruitFlyPlugin;
 
 mod config;
+mod fruit_fly;
 mod game;
-mod level_loaders;
+mod mesh_loader;
 mod spider;
 mod tree;
 mod web;
-mod fruit_fly;
 
 fn main() {
     let mut app = App::new();
@@ -35,6 +36,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         fit_canvas_to_parent: true,
+                        title: "Silk & Snare".to_string(),
                         ..default()
                     }),
                     ..default()
@@ -53,6 +55,7 @@ fn main() {
     }
 
     app.add_plugins(GamePlugin);
+    app.add_plugins(MeshLoaderPlugin);
     app.add_plugins(TreePlugin);
     app.add_plugins(SpiderPlugin);
     app.add_plugins(FruitFlyPlugin);
