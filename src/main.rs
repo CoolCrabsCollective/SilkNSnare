@@ -8,7 +8,9 @@ use bevy::render::RenderPlugin;
 use bevy::DefaultPlugins;
 use tree::TreePlugin;
 
+mod config;
 mod game;
+mod level_loaders;
 mod spider;
 mod tree;
 mod web;
