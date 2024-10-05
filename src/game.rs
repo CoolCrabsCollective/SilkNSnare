@@ -6,7 +6,6 @@ use bevy::prelude::Projection::Perspective;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
@@ -17,18 +16,17 @@ impl Plugin for GamePlugin {
             RapierPhysicsPlugin::<NoUserData>::default(),
             RapierDebugRenderPlugin::default().disabled(),
         ))
-            //.add_systems(Update, debug_render_toggle)
-            .insert_resource(AmbientLight {
-                color: Color::WHITE,
-                brightness: 1.0 / 5.0f32,
-            })
-            .insert_resource(ClearColor(Color::rgb(0.3, 0.6, 0.9)))
-            .insert_resource(DirectionalLightShadowMap { size: 4096 });
+        //.add_systems(Update, debug_render_toggle)
+        .insert_resource(AmbientLight {
+            color: Color::WHITE,
+            brightness: 1.0 / 5.0f32,
+        })
+        .insert_resource(ClearColor(Color::rgb(0.3, 0.6, 0.9)))
+        .insert_resource(DirectionalLightShadowMap { size: 4096 });
 
         //app.add_plugins(DebugCameraControllerPlugin);
     }
 }
-
 
 /// set up a simple 3D scene
 fn setup(
@@ -55,7 +53,7 @@ fn setup(
             illuminance: 50000.0,
             ..default()
         },
-        transform: Transform::from_rotation(Quat::from_rotation_x(-0.75 * PI)),
+        transform: get_initial_sun_transform(),
         // This is a relatively small scene, so use tighter shadow
         // cascade bounds than the default for better quality.
         // We also adjusted the shadow map to be larger since we're
@@ -64,34 +62,39 @@ fn setup(
             maximum_distance: 100.0,
             ..default()
         }
-            .into(),
+        .into(),
         ..default()
     });
     // camera
-    commands
-        .spawn(Camera3dBundle {
-            camera: Camera {
-                order: 70,
-                ..default()
-            },
-            transform: get_camera_position(),
-            projection: Perspective(PerspectiveProjection {
-                fov: 10.0f32.to_radians(),
-                ..default()
-            }),
+    commands.spawn(Camera3dBundle {
+        camera: Camera {
+            order: 70,
             ..default()
-        });
-        /*.insert(PostProcessSettings {
-            time: 0.0,
-            enable: 1.0,
+        },
+        transform: get_initial_camera_transform(),
+        projection: Perspective(PerspectiveProjection {
+            fov: 60.0f32.to_radians(),
             ..default()
-        })*/
-        //.insert(HolyCam);
+        }),
+        ..default()
+    });
+    /*.insert(PostProcessSettings {
+        time: 0.0,
+        enable: 1.0,
+        ..default()
+    })*/
+    //.insert(HolyCam);
 }
 
-fn get_camera_position() -> Transform {
-    Transform::from_xyz(0.0, 60.0, 28.0).looking_at(vec3(0.0, 0.0, 0.0), Vec3::Y)
+pub fn get_initial_camera_transform() -> Transform {
+    Transform::from_xyz(5.0, 0.0, 0.0).with_rotation(Quat::from_axis_angle(Vec3::Y, PI / 2.0))
 }
+
+fn get_initial_sun_transform() -> Transform {
+    let mut res = get_initial_camera_transform();
+    res.with_translation(res.translation + Vec3::new(0.0, 0.0, 10.0))
+}
+
 /*
 fn reset_camera(
     mut camera_query: Query<(&mut Transform, &mut Projection)>,
