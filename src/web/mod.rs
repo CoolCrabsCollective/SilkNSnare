@@ -97,7 +97,6 @@ fn update_simulation(mut query: Query<(&mut Web)>, time: Res<Time>) {
 
             particle.velocity += particle.force / particle.mass * h;
             particle.position += particle.velocity * h;
-            println!("Particle position: {}", particle.position)
         }
     }
 }
