@@ -283,9 +283,9 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
         if spring_idx.is_some() {
             let spring = &web.springs[spring_idx.unwrap()];
             let t = if spring.first_index == existing_p1.unwrap() {
-                0.0
-            } else {
                 1.0
+            } else {
+                0.0
             };
             spider.target_position = SpiderPosition::WEB(spring_idx.unwrap(), t);
             println!("Path is along existing spring");

@@ -54,7 +54,7 @@ fn create_tree_collider(
     }
 
     let Some(gltf) = gltf_assets.get(&tree_scene.0) else {
-        println!("Waiting on loaded tree");
+        //println!("Waiting on loaded tree"); shut up lol
         return;
     };
     *loaded = true;
