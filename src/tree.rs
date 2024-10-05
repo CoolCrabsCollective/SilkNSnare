@@ -29,3 +29,11 @@ fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, ti
 pub fn get_target_camera_position() -> Vec3 {
     Vec3::new(-1.75, 0.5, 2.0)
 }
+
+pub fn get_arena_center() -> Vec3 {
+    Vec3::new(
+        get_target_camera_position().x,
+        get_target_camera_position().y,
+        0.0,
+    )
+}
