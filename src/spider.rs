@@ -84,5 +84,9 @@ fn spawn_spider(
             rotation: Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0),
             scale: Vec3::new(0.25, 0.25, 0.25),
         },
+        global_transform: Default::default(),
+        visibility: Default::default(),
+        inherited_visibility: Default::default(),
+        view_visibility: Default::default(),
     }));
 }
