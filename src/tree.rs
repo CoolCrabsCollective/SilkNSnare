@@ -27,5 +27,5 @@ fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, ti
 }
 
 pub fn get_target_camera_position() -> Vec3 {
-    Vec3::new(2.0, 0.5, 1.75)
+    Vec3::new(-1.75, 0.5, 2.0)
 }

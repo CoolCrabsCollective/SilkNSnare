@@ -1,11 +1,11 @@
 use std::f32::consts::PI;
 
+use crate::web::WebSimulationPlugin;
 use bevy::math::vec3;
 use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::prelude::Projection::Perspective;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use crate::web::WebSimulationPlugin;
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
@@ -15,7 +15,7 @@ impl Plugin for GamePlugin {
         app.add_plugins((
             RapierPhysicsPlugin::<NoUserData>::default(),
             RapierDebugRenderPlugin::default().disabled(),
-            WebSimulationPlugin
+            WebSimulationPlugin,
         ))
         //.add_systems(Update, debug_render_toggle)
         .insert_resource(AmbientLight {
@@ -88,7 +88,7 @@ fn setup(
 }
 
 pub fn get_initial_camera_transform() -> Transform {
-    Transform::from_xyz(5.0, 0.0, 0.0).with_rotation(Quat::from_axis_angle(Vec3::Y, PI / 2.0))
+    Transform::from_xyz(0.0, 0.0, 5.0).with_rotation(Quat::from_axis_angle(Vec3::Y, 0.0))
 }
 
 fn get_initial_sun_transform() -> Transform {
