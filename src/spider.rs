@@ -41,7 +41,7 @@ fn move_spider(
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
     time: Res<Time>,
-    web_query: Query<&Web>,
+    web_query: Query<&mut Web>,
     spider_plane: Res<WebPlane>,
 ) {
     if let Ok((mut spider, mut spider_transform)) = spider_query.get_single_mut() {
@@ -58,6 +58,14 @@ fn move_spider(
                 }
             } else {
                 println!("Cursor is not in the game window.");
+            }
+        }
+
+        let web = web_query.single();
+
+        for spring in &web.springs {
+            if spring.intersects(spider_transform.translation, spider.target_position) {
+
             }
         }
 
