@@ -19,7 +19,8 @@ fn spawn_tree(mut commands: Commands, asset_server: ResMut<AssetServer>) {
 }
 
 fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, time: Res<Time>) {
-    let t = (time.elapsed_seconds() / 2.0).min(1.0);
+    let s = (time.elapsed_seconds() / 2.0).min(1.0);
+    let t = 3.0 * s * s - 2.0 * s * s * s;
     if let Ok((mut camera_transform, _)) = camera_transform_query.get_single_mut() {
         camera_transform.translation = ((1.0 - t) * get_initial_camera_transform().translation)
             + t * get_target_camera_position();
@@ -27,7 +28,7 @@ fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, ti
 }
 
 pub fn get_target_camera_position() -> Vec3 {
-    Vec3::new(-1.75, 0.5, 1.4)
+    Vec3::new(-1.75, 0.5, 1.75)
 }
 
 pub fn get_arena_center() -> Vec3 {
