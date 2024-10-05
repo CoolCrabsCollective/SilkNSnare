@@ -1,18 +1,18 @@
-
-use bevy::prelude::*;
+use crate::game::GamePlugin;
 use bevy::app::{App, PluginGroup};
-use bevy::{window, DefaultPlugins};
+use bevy::prelude::*;
 use bevy::render::render_resource::{AddressMode, FilterMode, SamplerDescriptor};
-use bevy::render::RenderPlugin;
 use bevy::render::settings::{WgpuFeatures, WgpuSettings};
 use bevy::render::texture::{ImageAddressMode, ImageFilterMode, ImageSamplerDescriptor};
-use crate::game::GamePlugin;
+use bevy::render::RenderPlugin;
+use bevy::{window, DefaultPlugins};
+use tree::TreePlugin;
 
 mod game;
 mod web;
+mod tree;
 
 fn main() {
-
     let mut app = App::new();
 
     let default_sampler = ImageSamplerDescriptor {
@@ -39,12 +39,16 @@ fn main() {
     } else {
         app.add_plugins(
             DefaultPlugins
-                .set(RenderPlugin { render_creation: Default::default(), synchronous_pipeline_compilation: false })
+                .set(RenderPlugin {
+                    render_creation: Default::default(),
+                    synchronous_pipeline_compilation: false,
+                })
                 .set(ImagePlugin { default_sampler }),
         );
     }
 
     app.add_plugins(GamePlugin);
+    app.add_plugins(TreePlugin);
 
     app.run();
 }
