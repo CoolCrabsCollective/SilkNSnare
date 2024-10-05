@@ -34,6 +34,6 @@ impl Spring {
         let unit = p_diff / cur_len;
         let v_diff = web.particles[self.first_index].velocity - web.particles[self.second_index].velocity;
 
-        unit * self.stiffness * (10.0 - cur_len) - self.damping * unit.dot(v_diff)
+        unit * (self.stiffness * (self.rest_length - cur_len) - self.damping * unit.dot(v_diff))
     }
 }
