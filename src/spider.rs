@@ -77,7 +77,19 @@ fn move_spider(
         let web = web_query.single();
 
         for spring in &web.springs {
-            if spring.intersects(spider_transform.translation, spider.target_position) {}
+            let result = spring.intersects(web,
+                                           Vec3::new(0.0, 0.0, -1.0),
+                                           spider_transform.translation, spider.target_position);
+            if result.is_none() {
+                continue
+            }
+
+            let new_pos = result.unwrap();
+            if new_pos.distance_squared(spider_transform.translation) < 0.1 * 0.1 {
+                continue
+            }
+
+            spider.target_position = new_pos;
         }
 
         if (spider_transform.translation - spider.target_position).norm() < 1e-2 {
@@ -102,7 +114,7 @@ fn spawn_spider(
             transform: Transform {
                 translation: Vec3::new(0.0, 0.0, 0.0),
                 rotation: Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0),
-                scale: Vec3::new(0.15, 0.15, 0.15),
+                scale: Vec3::new(0.1, 0.1, 0.1),
             },
             global_transform: Default::default(),
             visibility: Default::default(),
