@@ -29,12 +29,11 @@ impl Spring {
     }
 
     pub fn get_force_p1(self: &Spring, web: &Web) -> Vec3 {
-        let mut dir = (web.particles[self.first_index].position - web.particles[self.second_index].position);
-        let cur_len = dir.length();
-        dir /= cur_len;
+        let p_diff = web.particles[self.first_index].position - web.particles[self.second_index].position;
+        let cur_len = p_diff.length();
+        let unit = p_diff / cur_len;
+        let v_diff = web.particles[self.first_index].velocity - web.particles[self.second_index].velocity;
 
-        //let mut vDiff =
-
-        return dir
+        unit * self.stiffness * (10.0 - cur_len) - self.damping * unit.dot(v_diff)
     }
 }
