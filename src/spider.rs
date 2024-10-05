@@ -204,6 +204,13 @@ fn set_new_target(p: Vec3, spider: &mut Spider, spider_transform: &Transform, we
         let existing_p1 = web.get_particle_index(spider_transform.translation, 0.2);
         let existing_p2 = web.get_particle_index(spider.target_position, 0.2);
 
+        if existing_p1.is_some()
+            && existing_p2.is_some()
+            && web.has_spring(existing_p1.unwrap(), existing_p2.unwrap())
+        {
+            return;
+        }
+
         let p1 = if existing_p1.is_none() {
             web.particles.push(Particle {
                 position: spider_transform.translation,

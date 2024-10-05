@@ -1,6 +1,6 @@
 mod ensnare;
 mod render;
-pub(crate) mod spring;
+pub mod spring;
 
 use crate::tree::get_arena_center;
 use crate::web::spring::Spring;
@@ -24,6 +24,19 @@ pub struct Web {
     pub particles: Vec<Particle>,
     pub springs: Vec<Spring>,
     pub mass_per_unit_length: f32,
+}
+
+impl Web {
+    pub fn has_spring(&self, p1: usize, p2: usize) -> bool {
+        for spring in &self.springs {
+            if spring.first_index == p1 && spring.second_index == p2
+                || spring.first_index == p2 && spring.second_index == p1
+            {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl Default for Web {
