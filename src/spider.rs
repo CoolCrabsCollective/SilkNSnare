@@ -1,6 +1,5 @@
 use crate::web::Web;
-use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
+use bevy::{prelude::*, window::PrimaryWindow};
 
 pub struct SpiderPlugin;
 
@@ -38,7 +37,7 @@ fn move_spider(
     q_windows: Query<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
-    time: Res<Time>,
+    _time: Res<Time>,
     web_query: Query<&Web>,
     spider_plane: Res<WebPlane>,
 ) {
@@ -74,7 +73,7 @@ fn move_spider(
 fn spawn_spider(
     mut commands: Commands,
     asset_server: ResMut<AssetServer>,
-    mut camera_transform_query: Query<(&mut Transform, &Camera)>,
+    mut _camera_transform_query: Query<(&mut Transform, &Camera)>,
 ) {
     let start_pos = Vec3::new(-2.0, 0.0, 0.0);
     commands.spawn((Spider::new(10.0, start_pos), SceneBundle {

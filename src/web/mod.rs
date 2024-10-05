@@ -120,7 +120,7 @@ fn generate_web(row_count: usize, col_count: usize, size: f32) -> Web {
     web
 }
 
-fn update_simulation(mut query: Query<(&mut Web)>, time: Res<Time>) {
+fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
     let h = time.delta_seconds();
     for mut web in &mut query {
         for i in 0..web.particles.len() {
