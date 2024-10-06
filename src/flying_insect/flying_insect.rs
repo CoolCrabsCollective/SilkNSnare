@@ -7,6 +7,9 @@ use bevy::prelude::{
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
+use bevy::log::error;
+use crate::web::ensnare::EnsnaredEntity;
+use crate::web::Web;
 
 pub struct FlyingInsectPlugin;
 
@@ -23,6 +26,29 @@ impl Plugin for FlyingInsectPlugin {
             timer: Timer::new(Duration::from_millis(500), TimerMode::Repeating),
         });
     }
+}
+
+fn debug_enstare_bug(
+    mut fly_query: Query<(&FlyingInsect, &Transform, Entity)>,
+    mut web_query: Query<&mut Web>
+) {
+    let Ok(mut web_data) = web_query.get_single_mut() else {
+        error!("ERROR NO WEB OR MORE THAN ONE WEB");
+        return;
+    };
+
+    let Ok((insect, _, fly_entity)) = fly_query.get_single_mut() else {
+        error!("ERROR NO fly");
+        return;
+    };
+
+    let spring = web_data.springs.get_mut(0).unwrap();
+    let ensnared = EnsnaredEntity{
+        entity: fly_entity.clone(),
+        snare_position: 0.5,
+        mass: insect.weight,
+    };
+    spring.ensnared_entities.push(ensnared);
 }
 
 pub struct BezierCurve {
