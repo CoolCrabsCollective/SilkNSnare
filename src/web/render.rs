@@ -6,25 +6,42 @@ use bevy::{
         render_asset::RenderAssetUsages,
     },
 };
+use bevy_rapier3d::prelude::Collider;
 
 use super::Web;
 
 pub const WEB_SILK_THICKNESS: f32 = 0.01;
 
 #[derive(Component)]
-pub struct WebRenderSegment(Handle<Mesh>);
+pub struct WebRenderMesh {
+    mesh_handle: Handle<Mesh>,
+}
+
+/// used only for collision
+#[derive(Component)]
+pub struct WebSegmentCollision {
+    pub spring_index: usize,
+}
 
 pub fn clear_web(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    web_render_segments_query: Query<(Entity, &WebRenderSegment)>,
+    web_render_segments_query: Query<(Entity, &WebRenderMesh)>,
+    web_segment_collisions_query: Query<(Entity, &WebSegmentCollision)>,
 ) {
-    // TODO: lets validate that we only have one web entity per frame..
-    for (web_render_segment_entity, WebRenderSegment(web_segment_mesh_handle)) in
-        web_render_segments_query.iter()
+    for (
+        web_render_segment_entity,
+        WebRenderMesh {
+            mesh_handle: web_segment_mesh_handle,
+        },
+    ) in web_render_segments_query.iter()
     {
         meshes.remove(web_segment_mesh_handle);
         commands.entity(web_render_segment_entity).despawn();
+    }
+
+    for (web_segment_collision_entity, _) in web_segment_collisions_query.iter() {
+        commands.entity(web_segment_collision_entity).despawn();
     }
 }
 
@@ -46,9 +63,14 @@ pub fn render_web(
         return;
     };
 
-    let mesh_handle: Handle<Mesh> = meshes.add(create_web_mesh(&web_data, camera_transform));
+    let (mesh, segment_colliders) = create_web_mesh(&web_data, camera_transform);
+    let mesh_handle: Handle<Mesh> = meshes.add(mesh);
 
     let t = (time.elapsed_seconds() / 4.0).min(1.0);
+
+    for (segment_collider, spring_index) in segment_colliders {
+        commands.spawn((segment_collider, WebSegmentCollision { spring_index }));
+    }
 
     commands.spawn((
         PbrBundle {
@@ -59,18 +81,22 @@ pub fn render_web(
             }),
             ..default()
         },
-        WebRenderSegment(mesh_handle.clone()),
+        WebRenderMesh {
+            mesh_handle: mesh_handle.clone(),
+        },
     ));
 }
 
-fn create_web_mesh(web_data: &Web, camera_transform: &Transform) -> Mesh {
+fn create_web_mesh(web_data: &Web, camera_transform: &Transform) -> (Mesh, Vec<(Collider, usize)>) {
     let mut positions: Vec<Vec3> = Vec::new();
     let mut normals: Vec<Vec3> = Vec::new();
     let mut uvs: Vec<Vec2> = Vec::new();
 
     let mut indices: Vec<u32> = Vec::new();
 
-    for spring in &web_data.springs {
+    let mut segment_colliders: Vec<(Collider, usize)> = Vec::new();
+
+    for (spring_index, spring) in web_data.springs.iter().enumerate() {
         let first_index = spring.first_index;
         let second_index = spring.second_index;
         let first_position = web_data.particles[first_index].position;
@@ -78,10 +104,15 @@ fn create_web_mesh(web_data: &Web, camera_transform: &Transform) -> Mesh {
         let center_position = (first_position + second_position) / 2.0;
 
         let to_camera = (camera_transform.translation - center_position).normalize();
-        let segment_direction = second_position - first_position;
-        let perp = segment_direction.cross(to_camera).normalize();
+        let segment_as_vec = second_position - first_position;
+        let perp = segment_as_vec.cross(to_camera).normalize();
         let top_left = first_position + perp * WEB_SILK_THICKNESS / 2.0;
         let top_right = first_position - perp * WEB_SILK_THICKNESS / 2.0;
+
+        segment_colliders.push((
+            Collider::capsule(first_position, second_position, WEB_SILK_THICKNESS / 2.0),
+            spring_index,
+        ));
 
         let bottom_left = second_position + perp * WEB_SILK_THICKNESS / 2.0;
         let bottom_right = second_position - perp * WEB_SILK_THICKNESS / 2.0;
@@ -117,7 +148,7 @@ fn create_web_mesh(web_data: &Web, camera_transform: &Transform) -> Mesh {
         indices.push(top_right_index.try_into().unwrap());
     }
 
-    Mesh::new(
+    let mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
     )
@@ -139,5 +170,7 @@ fn create_web_mesh(web_data: &Web, camera_transform: &Transform) -> Mesh {
         Mesh::ATTRIBUTE_UV_0,
         uvs.iter().map(|uv| uv.to_array()).collect::<Vec<_>>(),
     )
-    .with_inserted_indices(Indices::U32(indices))
+    .with_inserted_indices(Indices::U32(indices));
+
+    (mesh, segment_colliders)
 }

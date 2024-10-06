@@ -231,6 +231,18 @@ fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
             let force = web.springs[j].get_force_p1(&web);
             let p1 = web.springs[j].first_index;
             let p2 = web.springs[j].second_index;
+
+            // calculate mass of ensnared_entities
+            for ensnared in web.springs[j].ensnared_entities.clone() {
+                if !web.particles[p1].pinned {
+                    web.particles[p1].mass += ensnared.mass*(1.0-ensnared.snare_position);
+                }
+
+                if !web.particles[p2].pinned {
+                    web.particles[p2].mass += ensnared.mass*(ensnared.snare_position);
+                }
+            }
+
             if !web.particles[p1].pinned {
                 web.particles[p1].force += force;
                 web.particles[p1].mass +=
