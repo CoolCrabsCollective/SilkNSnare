@@ -7,10 +7,12 @@ use bevy::{
     },
 };
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
+use std::f32::consts::PI;
 
 use super::Web;
 
-pub const WEB_SILK_THICKNESS: f32 = 0.05;
+pub const WEB_SILK_THICKNESS: f32 = 0.03;
+pub const WEB_SILK_PRISM_BASE: i32 = 4;
 
 #[derive(Component)]
 pub struct WebRenderMesh {
@@ -111,50 +113,104 @@ fn create_web_mesh(web_data: &Web, camera_transform: &Transform) -> (Mesh, Vec<(
         let first_position = web_data.particles[first_index].position;
         let second_position = web_data.particles[second_index].position;
         let center_position = (first_position + second_position) / 2.0;
-
-        let to_camera = (camera_transform.translation - center_position).normalize();
         let segment_as_vec = second_position - first_position;
-        let perp = segment_as_vec.cross(to_camera).normalize();
-        let top_left = first_position + perp * WEB_SILK_THICKNESS / 2.0;
-        let top_right = first_position - perp * WEB_SILK_THICKNESS / 2.0;
 
         segment_colliders.push((
             Collider::capsule(first_position, second_position, WEB_SILK_THICKNESS / 2.0),
             spring_index,
         ));
 
-        let bottom_left = second_position + perp * WEB_SILK_THICKNESS / 2.0;
-        let bottom_right = second_position - perp * WEB_SILK_THICKNESS / 2.0;
+        if WEB_SILK_PRISM_BASE < 3 {
+            let to_camera = (camera_transform.translation - center_position).normalize();
+            let perp = segment_as_vec.cross(to_camera).normalize();
+            let top_left = first_position + perp * WEB_SILK_THICKNESS / 2.0;
+            let top_right = first_position - perp * WEB_SILK_THICKNESS / 2.0;
 
-        let top_left_index = positions.len();
-        let top_right_index = top_left_index + 1;
-        let bottom_left_index = top_left_index + 2;
-        let bottom_right_index = top_left_index + 3;
+            let bottom_left = second_position + perp * WEB_SILK_THICKNESS / 2.0;
+            let bottom_right = second_position - perp * WEB_SILK_THICKNESS / 2.0;
 
-        positions.push(top_left);
-        positions.push(top_right);
-        positions.push(bottom_left);
-        positions.push(bottom_right);
+            let top_left_index = positions.len();
+            let top_right_index = top_left_index + 1;
+            let bottom_left_index = top_left_index + 2;
+            let bottom_right_index = top_left_index + 3;
 
-        normals.push(to_camera);
-        normals.push(to_camera);
-        normals.push(to_camera);
-        normals.push(to_camera);
+            positions.push(top_left);
+            positions.push(top_right);
+            positions.push(bottom_left);
+            positions.push(bottom_right);
 
-        uvs.push(Vec2::new(0.0, 0.0));
-        uvs.push(Vec2::new(1.0, 0.0));
-        uvs.push(Vec2::new(0.0, 1.0));
-        uvs.push(Vec2::new(1.0, 1.0));
+            normals.push(to_camera);
+            normals.push(to_camera);
+            normals.push(to_camera);
+            normals.push(to_camera);
 
-        // triangle 1
-        indices.push(bottom_left_index.try_into().unwrap());
-        indices.push(top_right_index.try_into().unwrap());
-        indices.push(top_left_index.try_into().unwrap());
+            uvs.push(Vec2::new(0.0, 0.0));
+            uvs.push(Vec2::new(1.0, 0.0));
+            uvs.push(Vec2::new(0.0, 1.0));
+            uvs.push(Vec2::new(1.0, 1.0));
 
-        // triangle 2
-        indices.push(bottom_left_index.try_into().unwrap());
-        indices.push(bottom_right_index.try_into().unwrap());
-        indices.push(top_right_index.try_into().unwrap());
+            // triangle 1
+            indices.push(bottom_left_index.try_into().unwrap());
+            indices.push(top_right_index.try_into().unwrap());
+            indices.push(top_left_index.try_into().unwrap());
+
+            // triangle 2
+            indices.push(bottom_left_index.try_into().unwrap());
+            indices.push(bottom_right_index.try_into().unwrap());
+            indices.push(top_right_index.try_into().unwrap());
+            continue;
+        }
+
+        for i in 0..WEB_SILK_PRISM_BASE {
+            let quat = Quat::from_axis_angle(
+                segment_as_vec.normalize(),
+                i as f32 / WEB_SILK_PRISM_BASE as f32 * 2.0 * PI,
+            );
+            let normal = quat.mul_vec3(Vec3::new(0.0, 0.0, 1.0));
+
+            let top_left_index = positions.len();
+            let top_right_index = top_left_index + 1;
+            let bottom_left_index = top_left_index + 2;
+            let bottom_right_index = top_left_index + 3;
+
+            let perp = segment_as_vec.cross(normal).normalize();
+            let top_left = first_position
+                + perp * WEB_SILK_THICKNESS / 2.0
+                + normal * WEB_SILK_THICKNESS / 2.0;
+            let top_right = first_position - perp * WEB_SILK_THICKNESS / 2.0
+                + normal * WEB_SILK_THICKNESS / 2.0;
+
+            let bottom_left = second_position
+                + perp * WEB_SILK_THICKNESS / 2.0
+                + normal * WEB_SILK_THICKNESS / 2.0;
+            let bottom_right = second_position - perp * WEB_SILK_THICKNESS / 2.0
+                + normal * WEB_SILK_THICKNESS / 2.0;
+
+            positions.push(top_left);
+            positions.push(top_right);
+            positions.push(bottom_left);
+            positions.push(bottom_right);
+
+            normals.push(normal);
+            normals.push(normal);
+            normals.push(normal);
+            normals.push(normal);
+
+            uvs.push(Vec2::new(0.0, 0.0));
+            uvs.push(Vec2::new(1.0, 0.0));
+            uvs.push(Vec2::new(0.0, 1.0));
+            uvs.push(Vec2::new(1.0, 1.0));
+
+            // triangle 1
+            indices.push(bottom_left_index.try_into().unwrap());
+            indices.push(top_right_index.try_into().unwrap());
+            indices.push(top_left_index.try_into().unwrap());
+
+            // triangle 2
+            indices.push(bottom_left_index.try_into().unwrap());
+            indices.push(bottom_right_index.try_into().unwrap());
+            indices.push(top_right_index.try_into().unwrap());
+        }
     }
 
     let mesh = Mesh::new(
