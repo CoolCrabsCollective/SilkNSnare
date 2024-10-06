@@ -37,13 +37,17 @@ impl EnsnaredEntity {
         first_particle_position: Vec3,
         second_particle_position: Vec3,
     ) -> Self {
+        let snare_position = Self::snare_position_from_world_space(
+            snare_position_world_space,
+            first_particle_position,
+            second_particle_position,
+        );
+
+        assert!(snare_position >= 0.0 && snare_position <= 1.0);
+
         EnsnaredEntity {
             entity,
-            snare_position: Self::snare_position_from_world_space(
-                snare_position_world_space,
-                first_particle_position,
-                second_particle_position,
-            ),
+            snare_position,
             mass,
         }
     }
@@ -226,6 +230,8 @@ pub fn split_ensnared_entities_for_spring_split(
             web.particles[old_spring.second_index].position,
         )
     };
+
+    assert!(new_particle_t >= 0.0 && new_particle_t <= 1.0);
 
     let new_spring_1_ensnared_entities = old_spring
         .ensnared_entities
