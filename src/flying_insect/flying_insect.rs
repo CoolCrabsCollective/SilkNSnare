@@ -1,15 +1,19 @@
 use crate::flying_insect::fruit_fly::spawn_fruit_fly;
+use crate::web::ensnare::Ensnared;
+use crate::web::ensnare::EnsnaredEntity;
+use crate::web::Web;
 use bevy::app::{App, Plugin, Update};
+use bevy::log::error;
 use bevy::math::{Mat3, Vec3};
 use bevy::prelude::{
     Commands, Component, Entity, Quat, Query, Res, Resource, Time, Timer, TimerMode, Transform,
+    Without,
 };
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
-use bevy::log::error;
-use crate::web::ensnare::EnsnaredEntity;
-use crate::web::Web;
+
+use super::fruit_fly::DAVID_DEBUG;
 
 pub struct FlyingInsectPlugin;
 
@@ -23,14 +27,17 @@ impl Plugin for FlyingInsectPlugin {
         app.add_systems(Update, move_flying_insect);
         app.add_systems(Update, spawn_fruit_fly);
         app.insert_resource(FruitFlySpawnTimer {
-            timer: Timer::new(Duration::from_millis(500), TimerMode::Repeating),
+            timer: Timer::new(
+                Duration::from_millis(if DAVID_DEBUG { 3000 } else { 500 }),
+                TimerMode::Repeating,
+            ),
         });
     }
 }
 
 fn debug_enstare_bug(
     mut fly_query: Query<(&FlyingInsect, &Transform, Entity)>,
-    mut web_query: Query<&mut Web>
+    mut web_query: Query<&mut Web>,
 ) {
     let Ok(mut web_data) = web_query.get_single_mut() else {
         error!("ERROR NO WEB OR MORE THAN ONE WEB");
@@ -43,7 +50,7 @@ fn debug_enstare_bug(
     };
 
     let spring = web_data.springs.get_mut(0).unwrap();
-    let ensnared = EnsnaredEntity{
+    let ensnared = EnsnaredEntity {
         entity: fly_entity.clone(),
         snare_position: 0.5,
         mass: insect.weight,
@@ -117,12 +124,12 @@ fn generate_bezier_handles(p0: Vec3, p3: Vec3) -> (Vec3, Vec3) {
 
 #[derive(Component)]
 pub struct FlyingInsect {
-    speed: f32,
-    progress: f32,
-    weight: f32,
-    offset: f32,
-    path: BezierCurve,
-    break_free_position: Vec3,
+    pub speed: f32,
+    pub progress: f32,
+    pub weight: f32,
+    pub offset: f32,
+    pub path: BezierCurve,
+    pub break_free_position: Vec3,
 }
 
 impl FlyingInsect {
@@ -140,7 +147,7 @@ impl FlyingInsect {
 }
 
 fn move_flying_insect(
-    mut fly_query: Query<(&mut FlyingInsect, &mut Transform, Entity)>,
+    mut fly_query: Query<(&mut FlyingInsect, &mut Transform, Entity), Without<Ensnared>>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
@@ -153,7 +160,11 @@ fn move_flying_insect(
             transform.translation = fly.path.at(fly.progress)
                 + Vec3::new(
                     0.0,
-                    (2.0 * PI * time.elapsed_seconds() * 0.65 + fly.offset).sin() * 0.05,
+                    if DAVID_DEBUG {
+                        0.0
+                    } else {
+                        (2.0 * PI * time.elapsed_seconds() * 0.65 + fly.offset).sin() * 0.05
+                    },
                     0.0,
                 )
                 + fly.break_free_position;

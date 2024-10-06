@@ -6,7 +6,7 @@ use crate::tree::get_arena_center;
 use crate::web::ensnare::split_ensnared_entities_for_spring_split;
 use crate::web::spring::Spring;
 use bevy::prelude::*;
-use ensnare::{debug_ensnare_entities, update_ensnared_entities};
+use ensnare::{debug_ensnare_entities, ensnare_enemies, update_ensnared_entities};
 use render::{clear_web, render_web};
 use std::f32::consts::PI;
 
@@ -109,6 +109,7 @@ impl Plugin for WebSimulationPlugin {
         app.add_systems(Update, render_web.after(clear_web));
 
         app.add_systems(Startup, debug_ensnare_entities.after(spawn_simulation));
+        app.add_systems(Update, ensnare_enemies);
         app.add_systems(Update, update_ensnared_entities);
     }
 }
