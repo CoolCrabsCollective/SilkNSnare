@@ -18,7 +18,7 @@ impl Plugin for TreePlugin {
 }
 
 fn spawn_tree(mut commands: Commands, asset_server: ResMut<AssetServer>) {
-    let gltf = asset_server.load("tree.glb#Scene0");
+    let gltf = asset_server.load("tree.glb");
     commands.insert_resource(TreeScene(gltf));
 }
 
