@@ -10,7 +10,7 @@ use ensnare::{debug_ensnare_entities, ensnare_enemies, update_ensnared_entities}
 use render::{clear_web, render_web};
 use std::f32::consts::PI;
 
-pub const START_WITH_A_WEB: bool = false;
+pub const START_WITH_A_WEB: bool = false; // FOR NOOBS
 
 pub struct WebSimulationPlugin;
 
@@ -18,6 +18,8 @@ pub struct Particle {
     pub position: Vec3,
     pub velocity: Vec3,
     pub force: Vec3,
+    pub impulse: Vec3,
+    pub impulse_duration: f32,
     pub mass: f32,
     pub pinned: bool,
 }
@@ -68,6 +70,8 @@ impl Web {
             position: position,
             velocity: Default::default(),
             force: Default::default(),
+            impulse: Default::default(),
+            impulse_duration: 0.0,
             mass: 0.0,
             pinned: false,
         });
@@ -119,7 +123,7 @@ impl Plugin for WebSimulationPlugin {
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
     let web = if START_WITH_A_WEB {
-        generate_web(2, 6, 1.0, 0.1, 20.0, 0.5)
+        generate_web(4, 8, 1.0, 0.1, 30.0, 0.5)
     } else {
         Default::default()
     };
@@ -133,6 +137,8 @@ fn generate_2_particle_example() -> Web {
         position: arena_center + Vec3::new(0.0, 0.0, 0.0),
         velocity: Default::default(),
         force: Default::default(),
+        impulse: Default::default(),
+        impulse_duration: 0.0,
         mass: 0.0,
         pinned: false,
     });
@@ -140,6 +146,8 @@ fn generate_2_particle_example() -> Web {
         position: arena_center + Vec3::new(0.0, 1.0, 0.0),
         velocity: Default::default(),
         force: Default::default(),
+        impulse: Default::default(),
+        impulse_duration: 0.0,
         mass: 0.0,
         pinned: true,
     });
@@ -169,6 +177,8 @@ fn generate_web(
         position: arena_center,
         velocity: Default::default(),
         force: Default::default(),
+        impulse: Default::default(),
+        impulse_duration: 0.0,
         mass: 0.0,
         pinned: false,
     });
@@ -192,6 +202,8 @@ fn generate_web(
                 position: pos,
                 velocity: Default::default(),
                 force: Default::default(),
+                impulse: Default::default(),
+                impulse_duration: 0.0,
                 mass: 0.0,
                 pinned: i == row_count - 1,
             });
@@ -284,6 +296,15 @@ pub fn step(web: &mut Web, air_damping: f32, h: f32) {
 
         particle.force.y -= 9.81 * particle.mass;
         particle.force += particle.velocity * -air_damping;
+
+        if particle.impulse_duration > 0.0 {
+            particle.force += particle.impulse * h;
+            particle.impulse_duration -= h;
+            if particle.impulse_duration <= 0.0 {
+                particle.impulse = Vec3::ZERO;
+                particle.impulse_duration = 0.0;
+            }
+        }
 
         particle.velocity += particle.force / particle.mass * h;
         particle.position += particle.velocity * h;

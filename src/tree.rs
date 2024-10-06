@@ -9,7 +9,7 @@ use bevy::prelude::*;
 pub struct TreePlugin;
 
 const MAP_LIMIT: f32 = 0.75;
-const ADD_DEBUG_PLANE: bool = true;
+const ADD_DEBUG_PLANE: bool = false;
 
 impl Plugin for TreePlugin {
     fn build(&self, app: &mut App) {

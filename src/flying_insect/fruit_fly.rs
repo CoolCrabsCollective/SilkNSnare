@@ -1,6 +1,6 @@
 use crate::flying_insect::flying_insect::{BezierCurve, FlyingInsect, FruitFlySpawnTimer};
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
+use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 use rand::Rng;
 
 pub const DAVID_DEBUG: bool = false;
@@ -49,7 +49,7 @@ pub fn spawn_fruit_fly(
                     transform: Transform {
                         translation: start_pos,
                         rotation: Quat::default(),
-                        scale: Vec3::new(0.02, 0.02, 0.02),
+                        scale: Vec3::new(0.02, 0.02, 0.02) * 1.5,
                     },
                     global_transform: Default::default(),
                     visibility: Default::default(),

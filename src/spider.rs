@@ -418,6 +418,8 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 position: position,
                 velocity: Default::default(),
                 force: Default::default(),
+                impulse: Default::default(),
+                impulse_duration: 0.0,
                 mass: 0.0,
                 pinned: true,
             });
@@ -433,6 +435,8 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 position: target_pos,
                 velocity: Default::default(),
                 force: Default::default(),
+                impulse: Default::default(),
+                impulse_duration: 0.0,
                 mass: 0.0,
                 pinned: true,
             });

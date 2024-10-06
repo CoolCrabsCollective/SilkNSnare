@@ -74,11 +74,11 @@ pub fn ensnare_enemies(
         |enemy_entity: Entity,
          (enemy, enemy_transform): (&FlyingInsect, &Transform),
          web_segment_collision: &WebSegmentCollision| {
-            let first_particle_position =
-                web.particles[web.springs[web_segment_collision.spring_index].first_index].position;
-            let second_particle_position = web.particles
-                [web.springs[web_segment_collision.spring_index].second_index]
-                .position;
+            // warn!("Handling ensnare");
+            let i1 = web.springs[web_segment_collision.spring_index].first_index;
+            let i2 = web.springs[web_segment_collision.spring_index].second_index;
+            let first_particle_position = web.particles[i1].position;
+            let second_particle_position = web.particles[i2].position;
             let spring = &mut web.springs[web_segment_collision.spring_index];
             let enemy_position = enemy_transform.translation;
 
@@ -88,7 +88,13 @@ pub fn ensnare_enemies(
                     .dot(second_particle_position - first_particle_position);
 
             if snare_position < -0.1 || snare_position > 1.1 {
-                log::error!("NOT 冰淇淋, first_particle_position={first_particle_position}, second_particle_position={second_particle_position}, enemy_position={enemy_position}, snare_position={snare_position}");
+                error!(
+                    "不冰淇淋, \
+            first_particle_position={first_particle_position}, \
+            second_particle_position={second_particle_position}, \
+            enemy_position={enemy_position}, \
+            snare_position={snare_position}"
+                );
             }
 
             let ensnared_entity = EnsnaredEntity {
@@ -100,6 +106,10 @@ pub fn ensnare_enemies(
             commands.entity(enemy_entity).insert(Ensnared);
 
             spring.ensnared_entities.push(ensnared_entity);
+            web.particles[i1].impulse = Vec3::new(0.0, 0.0, 1.0) * 5000.0;
+            web.particles[i1].impulse_duration = 0.1;
+            web.particles[i2].impulse = Vec3::new(0.0, 0.0, 1.0) * 5000.0;
+            web.particles[i2].impulse_duration = 0.1;
         };
 
     for collision_event in collision_events.read() {
