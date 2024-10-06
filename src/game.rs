@@ -1,6 +1,8 @@
 use crate::skybox::{Cubemap, CUBEMAPS};
 use crate::web::WebSimulationPlugin;
 use bevy::asset::LoadState;
+use bevy::color::palettes::basic::RED;
+use bevy::color::palettes::css::ORANGE_RED;
 use bevy::core_pipeline::Skybox;
 use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::prelude::Projection::Perspective;
@@ -58,8 +60,20 @@ fn setup(
     });*/
 
     commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 500.0,
+        color: Color::srgb(1.0, 0.6, 0.0),
+        brightness: 100.0,
+    });
+
+    commands.spawn(PointLightBundle {
+        // transform: Transform::from_xyz(5.0, 8.0, 2.0),
+        transform: Transform::from_xyz(-2.0, 1.0, 3.0),
+        point_light: PointLight {
+            intensity: 100_000.0,
+            color: ORANGE_RED.into(),
+            shadows_enabled: true,
+            ..default()
+        },
+        ..default()
     });
 
     // directional 'sun' light
