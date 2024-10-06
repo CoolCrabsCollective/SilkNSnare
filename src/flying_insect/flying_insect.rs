@@ -1,17 +1,18 @@
 use crate::flying_insect::fruit_fly::spawn_fruit_fly;
 use bevy::app::{App, Plugin, Update};
-use bevy::math::Vec3;
+use bevy::math::{Mat3, Vec3};
 use bevy::prelude::{
-    Commands, Component, Entity, Query, Res, Resource, Time, Timer, TimerMode, Transform,
+    Commands, Component, Entity, Quat, Query, Res, Resource, Time, Timer, TimerMode, Transform,
 };
 use rand::Rng;
+use std::f32::consts::PI;
 use std::time::Duration;
 
 pub struct FlyingInsectPlugin;
 
 #[derive(Resource)]
 pub struct FruitFlySpawnTimer {
-    timer: Timer,
+    pub timer: Timer,
 }
 
 impl Plugin for FlyingInsectPlugin {
@@ -51,6 +52,12 @@ impl BezierCurve {
         let (p1, p2) = generate_bezier_handles(p0, p3);
         BezierCurve::new(p0, p1, p2, p3)
     }
+
+    pub fn tangent_at(&self, t: f32) -> Vec3 {
+        3.0 * f32::powf(1.0 - t, 2.0) * (self.p1 - self.p0)
+            + 6.0 * (1.0 - t) * t * (self.p2 - self.p1)
+            + 3.0 * t * t * (self.p3 - self.p2)
+    }
 }
 
 fn generate_bezier_handles(p0: Vec3, p3: Vec3) -> (Vec3, Vec3) {
@@ -87,15 +94,18 @@ pub struct FlyingInsect {
     speed: f32,
     progress: f32,
     weight: f32,
+    offset: f32,
     path: BezierCurve,
 }
 
 impl FlyingInsect {
     pub fn new(speed: f32, weight: f32, bezier: BezierCurve) -> Self {
+        let mut rng = rand::thread_rng();
         FlyingInsect {
             speed,
             progress: 0.0,
             weight,
+            offset: rng.gen_range(0.0..2.0 * PI),
             path: bezier,
         }
     }
@@ -112,7 +122,26 @@ fn move_flying_insect(
         if fly.progress > 1.0 {
             commands.entity(entity).despawn();
         } else {
-            transform.translation = fly.path.at(fly.progress);
+            transform.translation = fly.path.at(fly.progress)
+                + Vec3::new(
+                    0.0,
+                    (2.0 * PI * time.elapsed_seconds() * 0.65 + fly.offset).sin() * 0.05,
+                    0.0,
+                );
+
+            let tangent = fly.path.tangent_at(fly.progress).normalize();
+            let up = Vec3::new(0.0, 1.0, 0.0);
+            let left = up.cross(tangent);
+            let base_transform_mat = Mat3::from_cols(
+                Vec3::new(-1.0, 0.0, 0.0),
+                Vec3::new(0.0, 0.0, 1.0),
+                Vec3::new(0.0, 1.0, 0.0),
+            );
+
+            transform.rotation = Quat::from_axis_angle(
+                Vec3::new(0.0, 0.0, 1.0),
+                ((PI / 2.0) * (2.0 * PI * time.elapsed_seconds() * 0.25).sin() - PI / 4.0) * 0.3,
+            ) * Quat::from_mat3(&base_transform_mat);
         }
     }
 }
