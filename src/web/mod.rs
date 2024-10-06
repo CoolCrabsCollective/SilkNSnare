@@ -115,7 +115,8 @@ impl Plugin for WebSimulationPlugin {
 
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
-    let web = generate_web(2, 6, 1.0, 0.1, 20.0, 0.5);
+    //let web = generate_web(2, 6, 1.0, 0.1, 20.0, 0.5);
+    let web: Web = Default::default();
     commands.spawn(web);
 }
 
