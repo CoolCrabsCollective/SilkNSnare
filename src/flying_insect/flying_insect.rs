@@ -56,16 +56,23 @@ impl BezierCurve {
 fn generate_bezier_handles(p0: Vec3, p3: Vec3) -> (Vec3, Vec3) {
     let mut rng = rand::thread_rng();
 
+    let x_min = p0.x.min(p3.x);
+    let y_min = p0.y.min(p3.y);
+    let z_min = p0.z.min(p3.z);
+    let x_max = p0.x.max(p3.x);
+    let y_max = p0.y.max(p3.y);
+    let z_max = p0.z.max(p3.z);
+
     let p1 = Vec3::new(
-        rng.gen_range(p0.x..p3.x),
-        rng.gen_range(p0.y..p3.y),
-        rng.gen_range(p0.z..p3.z),
+        rng.gen_range(x_min..x_max),
+        rng.gen_range(y_min..y_max),
+        rng.gen_range(z_min..z_max),
     );
 
     let p2 = Vec3::new(
-        rng.gen_range(p0.x..p3.x),
-        rng.gen_range(p0.y..p3.y),
-        rng.gen_range(p0.z..p3.z),
+        rng.gen_range(x_min..x_max),
+        rng.gen_range(y_min..y_max),
+        rng.gen_range(z_min..z_max),
     );
 
     if p2.z < p1.z {

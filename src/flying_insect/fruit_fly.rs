@@ -1,5 +1,6 @@
 use crate::flying_insect::flying_insect::{BezierCurve, FlyingInsect, FruitFlySpawnTimer};
 use bevy::prelude::*;
+use rand::Rng;
 use std::f32::consts::FRAC_1_SQRT_2;
 
 #[derive(Component)]
@@ -12,8 +13,14 @@ pub fn spawn_fruit_fly(
     mut ff_spawn_timer: ResMut<FruitFlySpawnTimer>,
 ) {
     //ff_spawn_timer.timer.tick(time.delta());
-    let start_pos = Vec3::new(-2.5, 0.5, 1.0);
-    let end_pos = Vec3::new(-2.0, 0.6, -2.0);
+    let mut rng = rand::thread_rng();
+    let x_begin = rng.gen_range(-4.0..0.0);
+    let x_end = rng.gen_range(-3.0..-1.0);
+    let y_begin = rng.gen_range(0.0..1.0);
+    let y_end = rng.gen_range(0.0..1.0);
+
+    let start_pos = Vec3::new(x_begin, y_begin, -2.0);
+    let end_pos = Vec3::new(x_end, y_end, 3.5);
     commands.spawn((
         FlyingInsect::new(
             0.1,
