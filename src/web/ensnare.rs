@@ -17,7 +17,7 @@ pub struct EnsnaredEntity {
     /// the position along the spring at which it's ensnared.
     ///  ranges from 0 (first particle) -> 1 (second particle)
     pub snare_position: f32,
-    pub mass: f32,
+    pub mass: f32
 }
 
 impl EnsnaredEntity {
