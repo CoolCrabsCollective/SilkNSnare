@@ -6,11 +6,11 @@ use bevy::{
         render_asset::RenderAssetUsages,
     },
 };
-use bevy_rapier3d::prelude::Collider;
+use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
 
 use super::Web;
 
-pub const WEB_SILK_THICKNESS: f32 = 0.01;
+pub const WEB_SILK_THICKNESS: f32 = 0.05;
 
 #[derive(Component)]
 pub struct WebRenderMesh {
@@ -69,7 +69,10 @@ pub fn render_web(
     let t = (time.elapsed_seconds() / 4.0).min(1.0);
 
     for (segment_collider, spring_index) in segment_colliders {
-        commands.spawn((segment_collider, WebSegmentCollision { spring_index }));
+        commands
+            .spawn((segment_collider, WebSegmentCollision { spring_index }))
+            .insert(ActiveEvents::COLLISION_EVENTS)
+            .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC);
     }
 
     commands.spawn((

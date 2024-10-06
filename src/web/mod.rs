@@ -6,9 +6,11 @@ use crate::tree::get_arena_center;
 use crate::web::ensnare::split_ensnared_entities_for_spring_split;
 use crate::web::spring::Spring;
 use bevy::prelude::*;
-use ensnare::{debug_ensnare_entities, update_ensnared_entities};
+use ensnare::{debug_ensnare_entities, ensnare_enemies, update_ensnared_entities};
 use render::{clear_web, render_web};
 use std::f32::consts::PI;
+
+pub const START_WITH_A_WEB: bool = true;
 
 pub struct WebSimulationPlugin;
 
@@ -109,14 +111,18 @@ impl Plugin for WebSimulationPlugin {
         app.add_systems(Update, render_web.after(clear_web));
 
         app.add_systems(Startup, debug_ensnare_entities.after(spawn_simulation));
+        app.add_systems(Update, ensnare_enemies);
         app.add_systems(Update, update_ensnared_entities);
     }
 }
 
 fn spawn_simulation(mut commands: Commands) {
     println!("WebSimulationPlugin init");
-    //let web = generate_web(2, 6, 1.0, 0.1, 20.0, 0.5);
-    let web: Web = Default::default();
+    let web = if START_WITH_A_WEB {
+        generate_web(2, 6, 1.0, 0.1, 20.0, 0.5)
+    } else {
+        Default::default()
+    };
     commands.spawn(web);
 }
 
