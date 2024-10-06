@@ -139,9 +139,7 @@ fn update_spider(
     let (mut spider, mut spider_transform) = result.unwrap();
     let web = &mut *web_query.single_mut();
 
-    if buttons.just_pressed(MouseButton::Left)
-        && spider.current_position.同(&spider.target_position)
-    {
+    if buttons.just_pressed(MouseButton::Left) {
         if let Some(position) = q_windows.single().cursor_position() {
             let (camera, camera_global_transform) = camera_query.single();
 
@@ -153,8 +151,6 @@ fn update_spider(
 
                 set_new_target(p - spider.current_position.to_vec3(web), &mut *spider, web);
             }
-        } else {
-            println!("Cursor is not in the game window.");
         }
     }
 
