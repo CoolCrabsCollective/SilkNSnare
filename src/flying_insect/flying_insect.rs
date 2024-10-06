@@ -122,6 +122,7 @@ pub struct FlyingInsect {
     weight: f32,
     offset: f32,
     path: BezierCurve,
+    break_free_position: Vec3,
 }
 
 impl FlyingInsect {
@@ -133,6 +134,7 @@ impl FlyingInsect {
             weight,
             offset: rng.gen_range(0.0..2.0 * PI),
             path: bezier,
+            break_free_position: Vec3::new(0.0, 0.0, 0.0),
         }
     }
 }
@@ -153,7 +155,8 @@ fn move_flying_insect(
                     0.0,
                     (2.0 * PI * time.elapsed_seconds() * 0.65 + fly.offset).sin() * 0.05,
                     0.0,
-                );
+                )
+                + fly.break_free_position;
 
             let tangent = fly.path.tangent_at(fly.progress).normalize();
             let up = Vec3::new(0.0, 1.0, 0.0);
