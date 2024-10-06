@@ -8,7 +8,8 @@ use bevy::prelude::*;
 
 pub struct TreePlugin;
 
-const MAP_LIMIT: f32 = 0.75;
+const TREE_LIMIT: f32 = 0.75;
+const MAP_LIMIT: Vec3 = Vec3::new(1.8, 1.0, 0.0);
 const ADD_DEBUG_PLANE: bool = false;
 
 impl Plugin for TreePlugin {
@@ -83,60 +84,35 @@ fn move_to_tree(
 }
 
 pub fn 树里有点吗(点: Vec3) -> bool {
-    let 差 = (get_arena_center() - 点);
-    差.y > MAP_LIMIT || 差.y < -MAP_LIMIT
+    if !照相机里有点吗(点) {
+        return false;
+    }
+
+    let 差 = get_arena_center() - 点;
+
+    差.y > TREE_LIMIT || 差.y < -TREE_LIMIT
 }
 
-pub fn 树里的开始(mut 点: Vec3, 向: Vec3) -> Option<Vec3> {
-    if 向.y > 0.0 {
-        if 点.y > get_arena_center().y + MAP_LIMIT {
-            return None;
+pub fn 树里有小路吗(开始: Vec3, 结尾: Vec3) -> bool {
+    if !树里有点吗(开始) || !树里有点吗(结尾) {
+        return false;
+    }
+
+    // 如果不好提高这号码
+    for i in 1..10 {
+        let t = i as f32 / 10.0;
+        if !树里有点吗(开始 * t + 结尾 * (1.0 - t)) {
+            return false;
         }
-
-        let y = get_arena_center().y + MAP_LIMIT;
-        let t = (y - 点.y) / 向.y;
-        //if t > 1.0 {
-        //    return None;
-        //}
-
-        return Some(点 + t * 向);
     }
 
-    if 点.y < get_arena_center().y - MAP_LIMIT {
-        return None;
-    }
-    let y = get_arena_center().y - MAP_LIMIT;
-    let t = (y - 点.y) / 向.y;
-    //if t > 1.0 {
-    //    return None;
-    //}
-    Some(点 + t * 向)
+    true
 }
 
-pub fn 树里的结尾(点: Vec3, 向: Vec3) -> Option<Vec3> {
-    if 向.y > 0.0 {
-        if 点.y > get_arena_center().y - MAP_LIMIT {
-            return None;
-        }
+pub fn 照相机里有点吗(点: Vec3) -> bool {
+    let 差 = get_arena_center() - 点;
 
-        let y = get_arena_center().y - MAP_LIMIT;
-        let t = (y - 点.y) / 向.y;
-        //if t > 1.0 {
-        //    return None;
-        //}
-        return Some(点 + t * 向);
-    }
-
-    if 点.y < get_arena_center().y + MAP_LIMIT {
-        return None;
-    }
-
-    let y = get_arena_center().y + MAP_LIMIT;
-    let t = (y - 点.y) / 向.y;
-    //if t > 1.0 {
-    //    return None;
-    //}
-    Some(点 + t * 向)
+    !(差.y > MAP_LIMIT.y || 差.y < -MAP_LIMIT.y || 差.x > MAP_LIMIT.x || 差.x < -MAP_LIMIT.x)
 }
 
 pub fn get_target_camera_position() -> Vec3 {
