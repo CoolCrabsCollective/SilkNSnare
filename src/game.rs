@@ -28,10 +28,6 @@ impl Plugin for GamePlugin {
             WebSimulationPlugin,
         ))
         .add_systems(Update, debug_render_toggle)
-        .insert_resource(AmbientLight {
-            color: Color::WHITE,
-            brightness: 1.0 / 5.0f32,
-        })
         .insert_resource(ClearColor(Color::srgb(0.3, 0.6, 0.9)))
         .insert_resource(DirectionalLightShadowMap { size: 4096 });
     }
@@ -56,8 +52,13 @@ fn setup(
         ..default()
     });*/
 
+    let orange_light_color = Color::srgb(0.97, 0.75, 0.6);
+
     commands.insert_resource(AmbientLight {
-        color: Color::srgb(1.0, 0.6, 0.0),
+        // color: Color::WHITE,
+        // color: Color::srgb(1.0, 0.6, 0.0),
+        // color: Color::srgb(1.0, 0.77, 0.59),
+        color: orange_light_color,
         brightness: 100.0,
     });
 
@@ -66,7 +67,7 @@ fn setup(
         transform: Transform::from_xyz(-2.0, 1.0, 3.0),
         point_light: PointLight {
             intensity: 100_000.0,
-            color: ORANGE_RED.into(),
+            color: orange_light_color,
             shadows_enabled: true,
             ..default()
         },
@@ -78,6 +79,7 @@ fn setup(
         directional_light: DirectionalLight {
             illuminance: light_consts::lux::FULL_MOON_NIGHT,
             shadows_enabled: true,
+            color: orange_light_color,
             ..default()
         },
         transform: Transform {
@@ -210,4 +212,3 @@ fn cycle_cubemap_asset(
     cubemap.image_handle = asset_server.load(CUBEMAPS[cubemap.index].0);
     cubemap.is_loaded = false;
 }
-

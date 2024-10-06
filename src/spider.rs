@@ -1,6 +1,7 @@
 use crate::tree::{树里有点吗, 树里的开始, 树里的结尾};
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
+use bevy::log;
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier3d::na::ComplexField;
 use std::f32::consts::PI;
@@ -360,15 +361,15 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
     let mut target_pos = position + target_dir * 10.0;
 
     let mut dest_spring_idx: Option<usize> = None;
-    let mut from_spring_idx: Option<usize> = match spider.current_position {
-        SpiderPosition::WEB(idx, _) => Some(idx),
+    let mut from_spring: Option<(usize, f32)> = match spider.current_position {
+        SpiderPosition::WEB(idx, t) => Some((idx, t)),
         SpiderPosition::TREE(_) => None,
     };
 
     let mut from_particle_idx: Option<usize> = None;
 
-    if from_spring_idx.is_some() {
-        let from_spring: &Spring = &web.springs[from_spring_idx.unwrap()];
+    if let Some((spring_index, _)) = from_spring {
+        let from_spring: &Spring = &web.springs[spring_index];
 
         let t = match spider.current_position {
             SpiderPosition::WEB(_, t) => t,
@@ -382,6 +383,31 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         }
     }
 
+    if let Some((spring_index, current_t)) = from_spring {
+        let spring: &Spring = &web.springs[spring_index];
+        let mut dir = web.particles[spring.second_index].position
+            - web.particles[spring.first_index].position;
+        let dir_len = dir.length();
+
+        dir = dir.normalize();
+        // dbg!(dir.dot(target_dir));
+        if dir.dot(target_dir) > 0.98 {
+            let delta_t = (target_δ.dot(dir).abs() / dir_len);
+            spider.target_position =
+                SpiderPosition::WEB(spring_index, (current_t + delta_t).clamp(0.0, 1.0));
+            // println!("Moving along spring from particle location, final_t={final_t}");
+            return;
+        }
+
+        if dir.dot(target_dir) < -0.98 {
+            let delta_t = (target_δ.dot(dir).abs() / dir_len);
+            spider.target_position =
+                SpiderPosition::WEB(spring_index, (current_t - delta_t).clamp(0.0, 1.0));
+            // println!("Moving along spring from particle location, final_t={final_t}");
+            return;
+        }
+    }
+
     if from_particle_idx.is_some() {
         for i in 0..web.springs.len() {
             let spring: &Spring = &web.springs[i];
@@ -391,6 +417,7 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
             {
                 let mut dir = web.particles[spring.second_index].position
                     - web.particles[spring.first_index].position;
+                let dir_len = dir.length();
                 let mut t = 0.0;
 
                 if spring.second_index == from_particle_idx.unwrap() {
@@ -399,10 +426,13 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 }
 
                 dir = dir.normalize();
+                // dbg!(dir.dot(target_dir));
                 if dir.dot(target_dir) > 0.98 {
+                    let delta_t = (target_δ.dot(dir).abs() / dir_len).clamp(0.0, 1.0);
                     spider.current_position = SpiderPosition::WEB(i, t);
-                    spider.target_position = SpiderPosition::WEB(i, 1.0 - t);
-                    println!("Moving along spring from particle location");
+                    spider.target_position = SpiderPosition::WEB(i, 1.0 - delta_t);
+
+                    // println!("Moving along spring from particle location, final_t={final_t}");
                     return;
                 }
             }
@@ -410,7 +440,7 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
     }
 
     for i in 0..web.springs.len() {
-        if from_spring_idx.is_some() && from_spring_idx.unwrap() == i {
+        if from_spring.is_some() && from_spring.unwrap().0 == i {
             continue;
         }
 
@@ -472,18 +502,6 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         }
     }
 
-    if from_spring_idx.is_some() {
-        let from_spring: &Spring = &web.springs[from_spring_idx.unwrap()];
-
-        if existing_p2.is_some()
-            && (from_spring.first_index == existing_p2.unwrap()
-                || from_spring.first_index == existing_p1.unwrap())
-        {
-            // move within the existing spring
-            // find t from target
-        }
-    }
-
     if existing_p1.is_some() && existing_p2.is_some() {
         let spring_idx = web.get_spring(existing_p1.unwrap(), existing_p2.unwrap());
 
@@ -510,7 +528,9 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
     }
 
     let p1 = if existing_p1.is_none() {
-        if from_spring_idx.is_none() {
+        if let Some((from_spring_index, _)) = from_spring {
+            web.split_spring(from_spring_index, position);
+        } else {
             web.particles.push(Particle {
                 position: position,
                 velocity: Default::default(),
@@ -520,8 +540,6 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 mass: 0.0,
                 pinned: true,
             });
-        } else {
-            web.split_spring(from_spring_idx.unwrap(), position);
         }
         web.particles.len() - 1
     } else {
