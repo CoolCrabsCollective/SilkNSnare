@@ -5,10 +5,7 @@ use crate::web::Web;
 use bevy::app::{App, Plugin, Update};
 use bevy::log::error;
 use bevy::math::{Mat3, Vec3};
-use bevy::prelude::{
-    Commands, Component, Entity, Quat, Query, Res, Resource, Time, Timer, TimerMode, Transform,
-    Without,
-};
+use bevy::prelude::{Commands, Component, Entity, Quat, Query, Res, Resource, Time, Timer, TimerMode, Transform, With, Without};
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
@@ -26,6 +23,7 @@ impl Plugin for FlyingInsectPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, move_flying_insect);
         app.add_systems(Update, spawn_fruit_fly);
+        app.add_systems(Update, insect_ensnared_tick_cooking_and_free);
         app.insert_resource(FruitFlySpawnTimer {
             timer: Timer::new(
                 Duration::from_millis(if DAVID_DEBUG { 3000 } else { 500 }),
@@ -107,19 +105,38 @@ pub struct FlyingInsect {
     pub offset: f32,
     pub path: BezierCurve,
     pub break_free_position: Vec3,
+    pub ensnared_and_rolled: bool,
+    pub cooked: bool,
+    pub cooking_timer: Timer,
+    pub freed_timer: Timer
 }
 
 impl FlyingInsect {
     pub fn new(speed: f32, weight: f32, bezier: BezierCurve) -> Self {
         let mut rng = rand::thread_rng();
-        FlyingInsect {
+        let mut new_flying = FlyingInsect {
             speed,
             progress: 0.0,
             weight,
             offset: rng.gen_range(0.0..2.0 * PI),
             path: bezier,
             break_free_position: Vec3::new(0.0, 0.0, 0.0),
-        }
+            ensnared_and_rolled: false,
+            cooked: false,
+            cooking_timer: Timer::new(
+                Duration::from_secs(5),
+                TimerMode::Repeating,
+            ),
+            freed_timer: Timer::new(
+                Duration::from_secs(30),
+                TimerMode::Repeating,
+            ),
+        };
+
+        new_flying.freed_timer.pause();
+        new_flying.cooking_timer.pause();
+
+        new_flying
     }
 }
 
@@ -158,6 +175,46 @@ fn move_flying_insect(
                 Vec3::new(0.0, 0.0, 1.0),
                 ((PI / 2.0) * (2.0 * PI * time.elapsed_seconds() * 0.25).sin() - PI / 4.0) * 0.3,
             ) * Quat::from_mat3(&base_transform_mat);
+        }
+    }
+}
+
+fn insect_ensnared_tick_cooking_and_free(
+    mut insect_query: Query<(&mut FlyingInsect, Entity), With<Ensnared>>,
+    time: Res<Time>,
+) {
+    for (mut insect, entity) in insect_query.iter_mut() {
+        if insect.freed_timer.paused() {
+            insect.freed_timer.unpause();
+        }
+
+        insect.freed_timer.tick(time.delta());
+        if insect.freed_timer.just_finished() {
+            // todo: free insect from web
+
+            insect.cooking_timer.reset();
+            insect.cooking_timer.pause();
+
+            insect.freed_timer.pause();
+            insect.freed_timer.reset();
+
+            insect.cooked = false;
+        }
+
+        if insect.ensnared_and_rolled {
+            if insect.cooking_timer.paused() {
+                insect.cooking_timer.unpause();
+            }
+
+            insect.cooking_timer.tick(time.delta());
+            if insect.cooking_timer.just_finished() {
+                insect.cooked = true;
+                insect.cooking_timer.reset();
+                insect.cooking_timer.pause();
+
+                insect.freed_timer.pause();
+                insect.freed_timer.reset();
+            }
         }
     }
 }
