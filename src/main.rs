@@ -18,6 +18,7 @@ mod tree;
 mod web;
 
 mod flying_insect;
+mod skybox;
 
 fn main() {
     let mut app = App::new();
