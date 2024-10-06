@@ -3,7 +3,7 @@ use bevy::prelude::{Image, Resource};
 use bevy::render::texture::CompressedImageFormats;
 
 pub const CUBEMAPS: &[(&str, CompressedImageFormats)] =
-    &[("skybox.png", CompressedImageFormats::NONE)];
+    &[("moon.png", CompressedImageFormats::NONE)];
 
 #[derive(Resource)]
 pub struct Cubemap {

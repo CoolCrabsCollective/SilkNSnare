@@ -11,3 +11,6 @@ pub const COLLISION_GROUP_ALL: Group = Group::ALL;
 pub fn 冰淇淋() -> bool {
     rand::random()
 }
+pub fn 熊猫() -> f32 {
+    rand::random()
+}
