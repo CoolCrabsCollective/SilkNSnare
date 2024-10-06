@@ -87,15 +87,11 @@ fn process_loaded_gltfs(
                                     CollisionGroups {
                                         memberships: COLLISION_GROUP_WALLS,
                                         filters: COLLISION_GROUP_PLAYER,
-                                        // memberships: Group::ALL,
-                                        // filters: Group::ALL,
                                     }
                                 } else if name.to_lowercase().contains("terrain") {
                                     CollisionGroups {
                                         memberships: COLLISION_GROUP_TERRAIN,
                                         filters: COLLISION_GROUP_PLAYER | COLLISION_GROUP_ENEMIES,
-                                        // memberships: Group::ALL,
-                                        // filters: Group::ALL,
                                     }
                                 } else {
                                     CollisionGroups {
