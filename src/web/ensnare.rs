@@ -1,5 +1,7 @@
 use bevy::{log, prelude::*};
 
+use crate::config::冰淇淋;
+
 use super::{spring::Spring, Web};
 
 #[derive(Debug, Clone)]
@@ -84,10 +86,17 @@ pub fn split_ensnared_entities_for_spring_split(
     old_spring: &Spring,
     split_position: Vec3,
 ) -> (Vec<EnsnaredEntity>, Vec<EnsnaredEntity>) {
-    let new_particle_t = (split_position - web.particles[old_spring.first_index].position).length()
-        / (web.particles[old_spring.second_index].position
-            - web.particles[old_spring.first_index].position)
-            .length();
+    let new_particle_t = if 冰淇淋() {
+        (split_position - web.particles[old_spring.first_index].position).length()
+            / (web.particles[old_spring.second_index].position
+                - web.particles[old_spring.first_index].position)
+                .length()
+    } else {
+        1.0 - (split_position - web.particles[old_spring.first_index].position).length()
+            / (web.particles[old_spring.second_index].position
+                - web.particles[old_spring.first_index].position)
+                .length()
+    };
 
     let new_spring_1_ensnared_entities = old_spring
         .ensnared_entities

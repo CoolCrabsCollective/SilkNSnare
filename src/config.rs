@@ -7,3 +7,7 @@ pub const COLLISION_GROUP_WALLS: Group = Group::GROUP_3;
 pub const COLLISION_GROUP_ENEMIES: Group = Group::GROUP_4;
 pub const COLLISION_GROUP_PROJECTILES: Group = Group::GROUP_5;
 pub const COLLISION_GROUP_ALL: Group = Group::ALL;
+
+pub fn 冰淇淋() -> bool {
+    rand::random()
+}
