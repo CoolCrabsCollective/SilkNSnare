@@ -1,11 +1,12 @@
 use crate::flying_insect::flying_insect::FlyingInsect;
 use crate::tree::{树里有小路吗, 树里有点吗};
-use crate::web::ensnare::Ensnared;
+use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier3d::na::ComplexField;
 use bevy_rapier3d::pipeline::CollisionEvent;
+use bevy_rapier3d::plugin::RapierContext;
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 use std::f32::consts::PI;
 use std::time::Duration;
@@ -128,6 +129,7 @@ fn update_spider(
     time: Res<Time>,
     mut web_query: Query<&mut Web>,
     spider_plane: Res<WebPlane>,
+    rapier_context: Res<RapierContext>,
 ) {
     let result = spider_query.get_single_mut();
 
@@ -149,7 +151,12 @@ fn update_spider(
                 let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                 let p = ray.origin + ray.direction * λ;
 
-                set_new_target(p - spider.current_position.to_vec3(web), &mut *spider, web);
+                set_new_target(
+                    p - spider.current_position.to_vec3(web),
+                    &mut *spider,
+                    web,
+                    &rapier_context,
+                );
             }
         }
     }
@@ -172,8 +179,9 @@ fn update_spider(
 
 fn handle_ensnared_insect_collision(
     mut commands: Commands,
+    mut web_query: Query<&mut Web>,
     mut spider_query: Query<(&mut Spider, Entity)>,
-    mut insects_query: Query<&mut FlyingInsect, With<Ensnared>>,
+    mut insects_query: Query<(&mut FlyingInsect), With<Ensnared>>,
     mut collision_events: EventReader<CollisionEvent>,
     time: Res<Time>,
     mut ss_snare_timer: ResMut<SnareTimer>,
@@ -187,6 +195,17 @@ fn handle_ensnared_insect_collision(
 
     let (mut spider, s_entity) = result.unwrap();
 
+    let mut roll_or_eat_insect =
+    |mut commands: &mut Commands, insect: &FlyingInsect, entity: Entity,
+     mut web_query: &mut Query<&mut Web>, mut s: &mut Spider| {
+        if insect.ensnared_and_rolled & insect.cooked { // TIME TO EAT!!!!!!
+            free_enemy_from_web(commands, entity, web_query);
+            commands.entity(entity).despawn();
+        } else {
+            s.snaring_insect = Some(entity);
+        }
+    };
+
     if spider.snaring_insect == None {
         for collision_event in collision_events.read() {
             if let CollisionEvent::Started(entity_a, entity_b, _) = collision_event {
@@ -197,32 +216,16 @@ fn handle_ensnared_insect_collision(
                     insects_query.get(*entity_b),
                 ) {
                     (true, false, Ok(insect), Err(_)) => {
-                        if insect.ensnared_and_rolled & insect.cooked {
-                            commands.entity(*entity_a).despawn();
-                        } else {
-                            spider.snaring_insect = Some(*entity_a);
-                        }
+                        roll_or_eat_insect(&mut commands, insect, *entity_a, &mut web_query, spider.as_mut());
                     }
                     (true, false, Err(_), Ok(insect)) => {
-                        if insect.ensnared_and_rolled & insect.cooked {
-                            commands.entity(*entity_b).despawn();
-                        } else {
-                            spider.snaring_insect = Some(*entity_b);
-                        }
+                        roll_or_eat_insect(&mut commands, insect, *entity_b, &mut web_query, spider.as_mut());
                     }
                     (false, true, Ok(insect), Err(_)) => {
-                        if insect.ensnared_and_rolled & insect.cooked {
-                            commands.entity(*entity_a).despawn();
-                        } else {
-                            spider.snaring_insect = Some(*entity_a);
-                        }
+                        roll_or_eat_insect(&mut commands, insect, *entity_a, &mut web_query, spider.as_mut());
                     }
                     (false, true, Err(_), Ok(insect)) => {
-                        if insect.ensnared_and_rolled {
-                            commands.entity(*entity_b).despawn();
-                        } else {
-                            spider.snaring_insect = Some(*entity_b);
-                        }
+                        roll_or_eat_insect(&mut commands, insect, *entity_b, &mut web_query, spider.as_mut());
                     }
                     _ => {
                         // the collision involved other entity types
@@ -280,7 +283,8 @@ fn handle_ensnared_insect_collision(
             ss_snare_timer.timer.pause();
 
             // Mark insect as rolled, wait on timeout before allowing to eat
-            let mut insect  = insects_query.get_mut(spider.snaring_insect.unwrap())
+            let mut insect = insects_query
+                .get_mut(spider.snaring_insect.unwrap())
                 .expect("FUCK NO ENSNARED BUG");
             insect.ensnared_and_rolled = true;
             spider.snaring_insect = None;
@@ -357,7 +361,12 @@ fn rotate_spider(web: &Web, spider: &mut Spider, time: &Res<Time>) {
     }
 }
 
-fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
+fn set_new_target(
+    target_δ: Vec3,
+    spider: &mut Spider,
+    web: &mut Web,
+    rapier_context: &Res<RapierContext>,
+) {
     let position = spider.current_position.to_vec3(web);
 
     if target_δ.length_squared() < 0.01 {
@@ -493,24 +502,24 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         target_pos = position + target_δ;
 
         let mut i = 0;
-        while !树里有点吗(target_pos) && i < 10 {
+        while !树里有点吗(target_pos, rapier_context) && i < 10 {
             target_pos += target_dir * 0.1;
             i += 1;
         }
 
-        if !树里有点吗(target_pos) {
+        if !树里有点吗(target_pos, rapier_context) {
             // 这个向没有树
             println!("Clicked in direction with nothing in front, doing nothing");
             return;
         }
 
-        if 树里有小路吗(position, target_pos) {
+        if 树里有小路吗(position, target_pos, rapier_context) {
             println!("Tree to Tree movement no silk");
             spider.current_position = SpiderPosition::TREE(position);
             spider.target_position = SpiderPosition::TREE(position + target_δ);
             return;
         }
-    } else if 树里有小路吗(position, target_pos) {
+    } else if 树里有小路吗(position, target_pos, rapier_context) {
         println!("Tree to Tree movement no silk");
         spider.current_position = SpiderPosition::TREE(position);
         spider.target_position = SpiderPosition::TREE(position + target_δ);
