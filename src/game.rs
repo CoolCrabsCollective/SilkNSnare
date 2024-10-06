@@ -4,6 +4,7 @@ use bevy::asset::LoadState;
 use bevy::color::palettes::basic::RED;
 use bevy::color::palettes::css::ORANGE_RED;
 use bevy::core_pipeline::Skybox;
+use bevy::math::VectorSpace;
 use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::prelude::Projection::Perspective;
 use bevy::prelude::*;
@@ -82,11 +83,8 @@ fn setup(
             color: orange_light_color,
             ..default()
         },
-        transform: Transform {
-            translation: Vec3::new(0.0, 2.0, 0.0),
-            rotation: Quat::from_rotation_x(-PI / 4.),
-            ..default()
-        },
+        transform: Transform::from_translation(Vec3::new(0.0, 3.0, -10.0))
+            .looking_at(Vec3::ZERO, Vec3::Z),
         // The default cascade config is designed to handle large scenes.
         // As this example has a much smaller world, we can tighten the shadow
         // bounds for better visual quality.
@@ -127,7 +125,7 @@ fn setup(
             // color: orange_light_color,
             // directional_light_color: orange_light_color,
             // directional_light_exponent: 100.0,
-            // falloff: FogFalloff::from_visibility(100.0),
+            // falloff: FogFalloff::from_visibility(500.0),
             // falloff: FogFalloff::from_visibility_colors(
             //     15.0, // distance in world units up to which objects retain visibility (>= 5% contrast)
             //     Color::srgb(0.35, 0.5, 0.66), // atmospheric extinction color (after light is lost due to absorption by atmospheric particles)
