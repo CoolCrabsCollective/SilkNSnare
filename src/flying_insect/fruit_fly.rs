@@ -31,7 +31,7 @@ pub fn spawn_fruit_fly(
             .spawn((
                 FlyingInsect::new(
                     0.1,
-                    5.0,
+                    0.1,
                     if DAVID_DEBUG {
                         BezierCurve::new(
                             Vec3::new(david_debug_pos.x, david_debug_pos.y, -1.0),
