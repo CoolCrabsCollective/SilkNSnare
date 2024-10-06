@@ -387,7 +387,6 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         let dir_len = dir.length();
 
         dir = dir.normalize();
-        // dbg!(dir.dot(target_dir));
         if dir.dot(target_dir) > 0.98 {
             let delta_t = (target_δ.dot(dir).abs() / dir_len);
             spider.target_position =
@@ -423,7 +422,6 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 }
 
                 dir = dir.normalize();
-                // dbg!(dir.dot(target_dir));
                 if dir.dot(target_dir) > 0.98 {
                     let delta_t = (target_δ.dot(dir).abs() / dir_len).clamp(0.0, 1.0);
                     spider.current_position = SpiderPosition::WEB(i, t);
@@ -528,9 +526,13 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         }
     }
 
+    let hack_spring_count = web.springs.len();
+    let mut hack_swap_removed_a_spring = false;
+
     let p1 = if existing_p1.is_none() {
         if let Some((from_spring_index, _)) = from_spring {
             web.split_spring(from_spring_index, position);
+            hack_swap_removed_a_spring = true;
         } else {
             web.particles.push(Particle {
                 position: position,
@@ -559,6 +561,14 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 pinned: true,
             });
         } else {
+            // HORRIBLE HACK
+            // basically this means that dest_spring_idx got invalidated in the
+            // above call to split_spring due to a swap_remove call that happens inside it
+            // so we detect this side effect and correct the index
+            if hack_swap_removed_a_spring && dest_spring_idx.unwrap() == hack_spring_count - 1 {
+                dest_spring_idx = Some(from_spring.unwrap().0);
+            }
+
             web.split_spring(dest_spring_idx.unwrap(), target_pos);
         }
         web.particles.len() - 1
@@ -575,6 +585,7 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         (web.particles[p1].position - web.particles[p2].position).length() * 0.75,
         vec![],
     ));
+
     spider.current_position = SpiderPosition::WEB(web.springs.len() - 1, 0.0);
     spider.target_position = SpiderPosition::WEB(web.springs.len() - 1, 1.0);
     println!("New path created");
