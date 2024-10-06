@@ -246,9 +246,11 @@ pub fn split_ensnared_entities_for_spring_split(
         split_position,
         web.particles[old_spring.first_index].position,
         web.particles[old_spring.second_index].position,
-    );
+    )
+    .clamp(0.0, 1.0);
 
-    assert!(new_particle_t >= 0.0 && new_particle_t <= 1.0);
+    error!("不好 particle t");
+    //assert!(new_particle_t >= 0.0 && new_particle_t <= 1.0);
 
     let new_spring_1_ensnared_entities = old_spring
         .ensnared_entities

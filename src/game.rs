@@ -126,6 +126,19 @@ fn setup(
         index: 0,
         image_handle: skybox_handle,
     });
+
+    commands.spawn((SceneBundle {
+        scene: asset_server.load("outdoor_scene.glb#Scene0"),
+        transform: Transform {
+            translation: Vec3::new(-4.0, -2.0, -10.0),
+            rotation: Quat::from_rotation_y(PI),
+            scale: Vec3::ONE,
+        },
+        global_transform: Default::default(),
+        visibility: Default::default(),
+        inherited_visibility: Default::default(),
+        view_visibility: Default::default(),
+    },));
 }
 
 pub fn get_initial_camera_transform() -> Transform {
