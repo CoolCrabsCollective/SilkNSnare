@@ -1,6 +1,6 @@
 use crate::flying_insect::flying_insect::FlyingInsect;
 use crate::tree::{树里有小路吗, 树里有点吗};
-use crate::web::ensnare::Ensnared;
+use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
 use bevy::{prelude::*, window::PrimaryWindow};
@@ -176,8 +176,9 @@ fn update_spider(
 
 fn handle_ensnared_insect_collision(
     mut commands: Commands,
+    mut web_query: Query<&mut Web>,
     mut spider_query: Query<(&mut Spider, Entity)>,
-    mut insects_query: Query<&mut FlyingInsect, With<Ensnared>>,
+    mut insects_query: Query<(&mut FlyingInsect), With<Ensnared>>,
     mut collision_events: EventReader<CollisionEvent>,
     time: Res<Time>,
     mut ss_snare_timer: ResMut<SnareTimer>,
@@ -191,6 +192,17 @@ fn handle_ensnared_insect_collision(
 
     let (mut spider, s_entity) = result.unwrap();
 
+    let mut roll_or_eat_insect =
+    |mut commands: &mut Commands, insect: &FlyingInsect, entity: Entity,
+     mut web_query: &mut Query<&mut Web>, mut s: &mut Spider| {
+        if insect.ensnared_and_rolled & insect.cooked { // TIME TO EAT!!!!!!
+            free_enemy_from_web(commands, entity, web_query);
+            commands.entity(entity).despawn();
+        } else {
+            s.snaring_insect = Some(entity);
+        }
+    };
+
     if spider.snaring_insect == None {
         for collision_event in collision_events.read() {
             if let CollisionEvent::Started(entity_a, entity_b, _) = collision_event {
@@ -201,32 +213,16 @@ fn handle_ensnared_insect_collision(
                     insects_query.get(*entity_b),
                 ) {
                     (true, false, Ok(insect), Err(_)) => {
-                        if insect.ensnared_and_rolled & insect.cooked {
-                            commands.entity(*entity_a).despawn();
-                        } else {
-                            spider.snaring_insect = Some(*entity_a);
-                        }
+                        roll_or_eat_insect(&mut commands, insect, *entity_a, &mut web_query, spider.as_mut());
                     }
                     (true, false, Err(_), Ok(insect)) => {
-                        if insect.ensnared_and_rolled & insect.cooked {
-                            commands.entity(*entity_b).despawn();
-                        } else {
-                            spider.snaring_insect = Some(*entity_b);
-                        }
+                        roll_or_eat_insect(&mut commands, insect, *entity_b, &mut web_query, spider.as_mut());
                     }
                     (false, true, Ok(insect), Err(_)) => {
-                        if insect.ensnared_and_rolled & insect.cooked {
-                            commands.entity(*entity_a).despawn();
-                        } else {
-                            spider.snaring_insect = Some(*entity_a);
-                        }
+                        roll_or_eat_insect(&mut commands, insect, *entity_a, &mut web_query, spider.as_mut());
                     }
                     (false, true, Err(_), Ok(insect)) => {
-                        if insect.ensnared_and_rolled {
-                            commands.entity(*entity_b).despawn();
-                        } else {
-                            spider.snaring_insect = Some(*entity_b);
-                        }
+                        roll_or_eat_insect(&mut commands, insect, *entity_b, &mut web_query, spider.as_mut());
                     }
                     _ => {
                         // the collision involved other entity types
