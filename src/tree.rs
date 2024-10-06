@@ -46,9 +46,9 @@ pub fn 树里的开始(mut 点: Vec3, 向: Vec3) -> Option<Vec3> {
 
         let y = get_arena_center().y + MAP_LIMIT;
         let t = (y - 点.y) / 向.y;
-        if t > 1.0 {
-            return None;
-        }
+        //if t > 1.0 {
+        //    return None;
+        //}
 
         return Some(点 + t * 向);
     }
@@ -58,9 +58,9 @@ pub fn 树里的开始(mut 点: Vec3, 向: Vec3) -> Option<Vec3> {
     }
     let y = get_arena_center().y - MAP_LIMIT;
     let t = (y - 点.y) / 向.y;
-    if t > 1.0 {
-        return None;
-    }
+    //if t > 1.0 {
+    //    return None;
+    //}
     Some(点 + t * 向)
 }
 
@@ -72,9 +72,9 @@ pub fn 树里的结尾(点: Vec3, 向: Vec3) -> Option<Vec3> {
 
         let y = get_arena_center().y - MAP_LIMIT;
         let t = (y - 点.y) / 向.y;
-        if t > 1.0 {
-            return None;
-        }
+        //if t > 1.0 {
+        //    return None;
+        //}
         return Some(点 + t * 向);
     }
 
@@ -84,9 +84,9 @@ pub fn 树里的结尾(点: Vec3, 向: Vec3) -> Option<Vec3> {
 
     let y = get_arena_center().y + MAP_LIMIT;
     let t = (y - 点.y) / 向.y;
-    if t > 1.0 {
-        return None;
-    }
+    //if t > 1.0 {
+    //    return None;
+    //}
     Some(点 + t * 向)
 }
 
