@@ -1,14 +1,14 @@
-use crate::tree::{树里有点吗, 树里的开始, 树里的结尾};
+use crate::flying_insect::flying_insect::FlyingInsect;
+use crate::tree::{树里有小路吗, 树里有点吗};
+use crate::web::ensnare::Ensnared;
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier3d::na::ComplexField;
+use bevy_rapier3d::pipeline::CollisionEvent;
+use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 use std::f32::consts::PI;
 use std::time::Duration;
-use bevy_rapier3d::pipeline::CollisionEvent;
-use crate::flying_insect::flying_insect::FlyingInsect;
-use crate::web::ensnare::Ensnared;
-use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 
 pub const NNN: bool = false; // currently october, set this to true in november
 pub const SPIDER_ROTATE_SPEED: f32 = 5.6;
@@ -33,7 +33,7 @@ struct Spider {
     current_position: SpiderPosition,
     current_rotation: f32,
     target_position: SpiderPosition,
-    snaring_insect: Option<Entity>
+    snaring_insect: Option<Entity>,
 }
 
 #[derive(Copy, Clone)]
@@ -101,7 +101,7 @@ impl Spider {
             target_position: SpiderPosition::TREE(pos),
             current_position: SpiderPosition::TREE(pos),
             current_rotation: 0.0,
-            snaring_insect: None
+            snaring_insect: None,
         }
     }
 }
@@ -116,10 +116,7 @@ impl Plugin for SpiderPlugin {
             left: Vec3::new(0.0, 1.0, 0.0),
         });
         app.insert_resource(SnareTimer {
-            timer: Timer::new(
-                Duration::from_millis(2000 ),
-                TimerMode::Repeating,
-            )
+            timer: Timer::new(Duration::from_millis(2000), TimerMode::Repeating),
         });
     }
 }
@@ -183,7 +180,7 @@ fn snare_insect(
     insects_query: Query<(&FlyingInsect, &Transform), With<Ensnared>>,
     mut collision_events: EventReader<CollisionEvent>,
     time: Res<Time>,
-    mut ss_snare_timer: ResMut<SnareTimer>
+    mut ss_snare_timer: ResMut<SnareTimer>,
 ) {
     let result = spider_query.get_single_mut();
 
@@ -201,7 +198,7 @@ fn snare_insect(
                     s_entity == *entity_a,
                     s_entity == *entity_b,
                     insects_query.get(*entity_a),
-                    insects_query.get(*entity_b)
+                    insects_query.get(*entity_b),
                 ) {
                     (true, false, Ok(_), Err(_)) => {
                         spider.snaring_insect = Some(*entity_b);
@@ -229,7 +226,7 @@ fn snare_insect(
                     s_entity == *entity_a,
                     s_entity == *entity_b,
                     spider.snaring_insect.unwrap() == *entity_a,
-                    spider.snaring_insect.unwrap() == *entity_b
+                    spider.snaring_insect.unwrap() == *entity_b,
                 ) {
                     (true, false, true, false) => {
                         still_snaring = false;
@@ -479,27 +476,31 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
 
     // no destination found, set target_pos from nearest tree point
     if dest_spring_idx.is_none() {
-        let result = 树里的开始(position - target_dir * 0.1, target_dir);
+        target_pos = position + target_δ;
 
-        if result.is_none() {
+        let mut i = 0;
+        while !树里有点吗(target_pos) && i < 10 {
+            target_pos += target_dir * 0.1;
+            i += 1;
+        }
+
+        if !树里有点吗(target_pos) {
+            // 这个向没有树
+            println!("Clicked in direction with nothing in front, doing nothing");
+            return;
+        }
+
+        if 树里有小路吗(position, target_pos) {
             println!("Tree to Tree movement no silk");
             spider.current_position = SpiderPosition::TREE(position);
             spider.target_position = SpiderPosition::TREE(position + target_δ);
             return;
         }
-
-        target_pos = result.unwrap() + target_dir * 0.1;
-
-        if 树里有点吗(position) || 树里有点吗(position - target_dir * 0.1) {
-            let 结尾 = 树里的结尾(position - target_dir * 0.1, target_dir);
-
-            if 结尾.is_none() {
-                println!("Tree to Tree movement no silk");
-                spider.current_position = SpiderPosition::TREE(position);
-                spider.target_position = SpiderPosition::TREE(target_pos);
-                return;
-            }
-        }
+    } else if 树里有小路吗(position, target_pos) {
+        println!("Tree to Tree movement no silk");
+        spider.current_position = SpiderPosition::TREE(position);
+        spider.target_position = SpiderPosition::TREE(position + target_δ);
+        return;
     }
 
     if existing_p1.is_some() && existing_p2.is_some() {
@@ -592,22 +593,23 @@ fn spawn_spider(
         -spider_plane.plane.xyz(),
         spider_plane_up,
     );
-    commands.spawn((
-        Spider::new(10.0, start_pos),
-        SceneBundle {
-            scene: asset_server.load("spider.glb#Scene0"),
-            transform: Transform {
-                translation: start_pos,
-                rotation: Quat::from_mat3(&base_transform_mat),
-                scale: Vec3::new(0.1, 0.1, 0.1),
+    commands
+        .spawn((
+            Spider::new(10.0, start_pos),
+            SceneBundle {
+                scene: asset_server.load("spider.glb#Scene0"),
+                transform: Transform {
+                    translation: start_pos,
+                    rotation: Quat::from_mat3(&base_transform_mat),
+                    scale: Vec3::new(0.1, 0.1, 0.1),
+                },
+                global_transform: Default::default(),
+                visibility: Default::default(),
+                inherited_visibility: Default::default(),
+                view_visibility: Default::default(),
             },
-            global_transform: Default::default(),
-            visibility: Default::default(),
-            inherited_visibility: Default::default(),
-            view_visibility: Default::default(),
-        },
-        Collider::capsule_y(1.0, 1.0),
-    ))
-    .insert(ActiveEvents::COLLISION_EVENTS)
-    .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC);;
+            Collider::capsule_y(1.0, 1.0),
+        ))
+        .insert(ActiveEvents::COLLISION_EVENTS)
+        .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC);
 }
