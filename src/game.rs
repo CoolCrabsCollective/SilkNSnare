@@ -109,7 +109,7 @@ fn setup(
             },
             transform: get_initial_camera_transform(),
             projection: Perspective(PerspectiveProjection {
-                fov: 60.0f32.to_radians(),
+                fov: 55.0f32.to_radians(),
                 ..default()
             }),
 
