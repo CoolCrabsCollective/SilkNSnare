@@ -15,7 +15,7 @@ impl Plugin for GamePlugin {
             RapierDebugRenderPlugin::default().disabled(),
             WebSimulationPlugin,
         ))
-        //.add_systems(Update, debug_render_toggle)
+        .add_systems(Update, debug_render_toggle)
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
@@ -104,6 +104,12 @@ fn get_initial_sun_transform() -> Transform {
     let res = get_initial_camera_transform();
     res.with_translation(res.translation + Vec3::new(0.0, 25.0, 1.75))
         .looking_at(Vec3::ZERO, Vec3::Y)
+}
+
+fn debug_render_toggle(mut context: ResMut<DebugRenderContext>, keys: Res<ButtonInput<KeyCode>>) {
+    if keys.just_released(KeyCode::F12) {
+        context.enabled = !context.enabled;
+    }
 }
 
 /*

@@ -15,115 +15,112 @@ use crate::config::{
 
 pub struct MeshLoaderPlugin;
 
+pub struct LoadedGltf {
+    pub gltf_handle: Handle<Gltf>,
+    pub processed: bool,
+}
+
+#[derive(Resource)]
+pub struct MeshLoader(Vec<LoadedGltf>);
+
 impl Plugin for MeshLoaderPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, handle_gltf_load_event);
+        app.add_systems(Startup, setup);
+        app.add_systems(Update, process_loaded_gltfs.after(setup));
     }
 }
 
-// pub fn load_level(asset_path: &str, commands: &mut Commands, asset_server: &ResMut<AssetServer>) {
-//     commands.spawn(SceneBundle {
-//         scene: asset_server.load(asset_path),
-//         ..default()
-//     });
-// }
+pub fn setup(mut commands: Commands) {
+    commands.insert_resource(MeshLoader(vec![]));
+}
+
+pub fn load_level(
+    asset_path: String,
+    asset_server: Res<AssetServer>,
+    mut mesh_loader: ResMut<MeshLoader>,
+) {
+    mesh_loader.0.push(LoadedGltf {
+        gltf_handle: asset_server.load(asset_path),
+        processed: false,
+    });
+}
 
 #[allow(clippy::too_many_arguments)]
-fn handle_gltf_load_event(
+fn process_loaded_gltfs(
     mut commands: Commands,
-    mut load_events: EventReader<AssetEvent<Gltf>>,
-    _mesh_handle_query: Query<&Handle<Mesh>>,
     meshes: Res<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     gltf_meshes: Res<Assets<GltfMesh>>,
     nodes: Res<Assets<GltfNode>>,
-    assets: Res<Assets<Gltf>>,
-    asset_server: Res<AssetServer>,
+    mut mesh_loader: ResMut<MeshLoader>,
+    gltf_assets: Res<Assets<Gltf>>,
 ) {
-    for event in load_events.read() {
-        if let AssetEvent::Added { id: asset_id } = event {
-            println!("Asset Added event: {:?}", asset_id);
-            println!("Untyped asset_id: {:?}", asset_id.untyped());
-            match asset_server.get_load_state(asset_id.untyped()) {
-                Some(LoadState::Loaded) => {
-                    println!("Loaded");
-                    if let Some(scene) = assets.get(*asset_id) {
-                        println!("Got Scene");
-                        for (name, node_handle) in &scene.named_nodes {
-                            println!("{}", name);
-                            if name.to_lowercase().contains("terrain")
-                                || name.to_lowercase().contains("wall")
-                            {
-                                log::info!("Generating collider from level object: {name:?}");
-                                if let (Some(mesh), Some(material_handle), Some(transform)) = (
-                                    get_mesh_from_gltf_node(
-                                        node_handle,
-                                        &meshes,
-                                        &gltf_meshes,
-                                        &nodes,
-                                    ),
-                                    get_material_from_gltf_node(node_handle, &gltf_meshes, &nodes),
-                                    nodes.get(node_handle).map(|node| node.transform),
-                                ) {
-                                    if name.to_lowercase().contains("wall") {
-                                        materials.get_mut(&material_handle).unwrap().base_color =
-                                            Color::rgba(0.0, 0.0, 0.0, 0.0);
-                                        materials.get_mut(&material_handle).unwrap().alpha_mode =
-                                            AlphaMode::Blend;
+    for loaded_gltf in mesh_loader.0.iter_mut() {
+        if loaded_gltf.processed {
+            continue;
+        }
+
+        let Some(gltf) = gltf_assets.get(&loaded_gltf.gltf_handle) else {
+            continue;
+        };
+
+        let first_scene_handle = gltf.scenes[0].clone();
+
+        for (name, node_handle) in &gltf.named_nodes {
+            println!("{}", name);
+            if name.to_lowercase().contains("terrain") || name.to_lowercase().contains("wall") {
+                log::info!("Generating collider from level object: {name:?}");
+                if let (Some(mesh), Some(material_handle), Some(transform)) = (
+                    get_mesh_from_gltf_node(node_handle, &meshes, &gltf_meshes, &nodes),
+                    get_material_from_gltf_node(node_handle, &gltf_meshes, &nodes),
+                    nodes.get(node_handle).map(|node| node.transform),
+                ) {
+                    if name.to_lowercase().contains("wall") {
+                        materials.get_mut(&material_handle).unwrap().base_color =
+                            Color::srgb(0.0, 0.0, 0.0);
+                        materials.get_mut(&material_handle).unwrap().alpha_mode = AlphaMode::Blend;
+                    }
+                    match get_collider_from_mesh(mesh, &transform) {
+                        Ok(collider) => {
+                            commands.spawn(collider).insert(
+                                if name.to_lowercase().contains("wall") {
+                                    CollisionGroups {
+                                        memberships: COLLISION_GROUP_WALLS,
+                                        filters: COLLISION_GROUP_PLAYER,
+                                        // memberships: Group::ALL,
+                                        // filters: Group::ALL,
                                     }
-                                    match get_collider_from_mesh(mesh, &transform) {
-                                        Ok(collider) => {
-                                            commands.spawn(collider).insert(
-                                                if name.to_lowercase().contains("wall") {
-                                                    CollisionGroups {
-                                                        memberships: COLLISION_GROUP_WALLS,
-                                                        filters: COLLISION_GROUP_PLAYER,
-                                                        // memberships: Group::ALL,
-                                                        // filters: Group::ALL,
-                                                    }
-                                                } else if name.to_lowercase().contains("terrain") {
-                                                    CollisionGroups {
-                                                        memberships: COLLISION_GROUP_TERRAIN,
-                                                        filters: COLLISION_GROUP_PLAYER
-                                                            | COLLISION_GROUP_ENEMIES,
-                                                        // memberships: Group::ALL,
-                                                        // filters: Group::ALL,
-                                                    }
-                                                } else {
-                                                    CollisionGroups {
-                                                        memberships: Group::ALL,
-                                                        filters: Group::ALL,
-                                                    }
-                                                },
-                                            );
-                                        }
-                                        Err(err) => {
-                                            log::error!("{err:?}");
-                                        }
+                                } else if name.to_lowercase().contains("terrain") {
+                                    CollisionGroups {
+                                        memberships: COLLISION_GROUP_TERRAIN,
+                                        filters: COLLISION_GROUP_PLAYER | COLLISION_GROUP_ENEMIES,
+                                        // memberships: Group::ALL,
+                                        // filters: Group::ALL,
                                     }
                                 } else {
-                                    log::error!(
-                                        "Node {name:?} was missing either a mesh or a transform"
-                                    );
-                                }
-                            }
+                                    CollisionGroups {
+                                        memberships: Group::ALL,
+                                        filters: Group::ALL,
+                                    }
+                                },
+                            );
+                        }
+                        Err(err) => {
+                            log::error!("{err:?}");
                         }
                     }
-                }
-                Some(LoadState::NotLoaded) => {
-                    log::error!("gltf failed to load dog");
-                }
-                Some(LoadState::Loading) => {
-                    log::error!("gltf is still loading");
-                }
-                Some(LoadState::Failed(err)) => {
-                    log::error!("gltf loaded with error: {}", err.to_string());
-                }
-                _ => {
-                    log::error!("gltf got None");
+                } else {
+                    log::error!("Node {name:?} was missing either a mesh or a transform");
                 }
             }
         }
+
+        commands.spawn(SceneBundle {
+            scene: first_scene_handle,
+            ..default()
+        });
+
+        loaded_gltf.processed = true;
     }
 }
 
