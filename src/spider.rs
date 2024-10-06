@@ -311,14 +311,16 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         }
     }
 
-    let from_spring: &Spring = web.springs[from_spring_idx];
+    if from_spring_idx.is_some() {
+        let from_spring: &Spring = &web.springs[from_spring_idx.unwrap()];
 
-    if existing_p2.is_some()
-        && (from_spring.first_index == existing_p2.unwrap()
-            || from_spring.first_index == existing_p1.unwrap())
-    {
-        // move within the existing spring
-        // find t from target
+        if existing_p2.is_some()
+            && (from_spring.first_index == existing_p2.unwrap()
+                || from_spring.first_index == existing_p1.unwrap())
+        {
+            // move within the existing spring
+            // find t from target
+        }
     }
 
     if existing_p1.is_some() && existing_p2.is_some() {

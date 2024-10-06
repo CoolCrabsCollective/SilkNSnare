@@ -217,54 +217,69 @@ fn generate_web(
 
 fn update_simulation(mut query: Query<&mut Web>, time: Res<Time>) {
     let h = time.delta_seconds();
+    let desired_h = 0.001;
+    let count: i32 = (h / desired_h).ceil() as i32;
     let air_damping = 0.5;
-    for mut web in &mut query {
-        for i in 0..web.particles.len() {
-            if web.particles[i].pinned {
-                continue;
-            }
-            web.particles[i].mass = 0.0;
-            web.particles[i].force = Vec3::new(0.0, 0.0, 0.0);
+
+    for i in 0..count {
+        for mut web in &mut query {
+            step(
+                &mut *web,
+                air_damping,
+                if i == count - 1 {
+                    h - (count - 1) as f32 * desired_h
+                } else {
+                    desired_h
+                },
+            );
         }
+    }
+}
 
-        for j in 0..web.springs.len() {
-            let force = web.springs[j].get_force_p1(&web);
-            let p1 = web.springs[j].first_index;
-            let p2 = web.springs[j].second_index;
+pub fn step(web: &mut Web, air_damping: f32, h: f32) {
+    for i in 0..web.particles.len() {
+        if web.particles[i].pinned {
+            continue;
+        }
+        web.particles[i].mass = 0.0;
+        web.particles[i].force = Vec3::new(0.0, 0.0, 0.0);
+    }
 
-            // calculate mass of ensnared_entities
-            for ensnared in web.springs[j].ensnared_entities.clone() {
-                if !web.particles[p1].pinned {
-                    web.particles[p1].mass += ensnared.mass*(1.0-ensnared.snare_position);
-                }
+    for j in 0..web.springs.len() {
+        let force = web.springs[j].get_force_p1(&web);
+        let p1 = web.springs[j].first_index;
+        let p2 = web.springs[j].second_index;
 
-                if !web.particles[p2].pinned {
-                    web.particles[p2].mass += ensnared.mass*(ensnared.snare_position);
-                }
-            }
-
+        // calculate mass of ensnared_entities
+        for ensnared in web.springs[j].ensnared_entities.clone() {
             if !web.particles[p1].pinned {
-                web.particles[p1].force += force;
-                web.particles[p1].mass +=
-                    web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
+                web.particles[p1].mass += ensnared.mass * (1.0 - ensnared.snare_position);
             }
+
             if !web.particles[p2].pinned {
-                web.particles[p2].force -= force;
-                web.particles[p2].mass +=
-                    web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
+                web.particles[p2].mass += ensnared.mass * (ensnared.snare_position);
             }
         }
 
-        for particle in &mut web.particles {
-            if particle.pinned {
-                continue;
-            }
-
-            particle.force.y -= 9.81 * particle.mass;
-            particle.force += particle.velocity * -air_damping;
-
-            particle.velocity += particle.force / particle.mass * h;
-            particle.position += particle.velocity * h;
+        if !web.particles[p1].pinned {
+            web.particles[p1].force += force;
+            web.particles[p1].mass += web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
         }
+        if !web.particles[p2].pinned {
+            web.particles[p2].force -= force;
+            web.particles[p2].mass += web.mass_per_unit_length * web.springs[j].rest_length / 2.0;
+        }
+    }
+
+    for particle in &mut web.particles {
+        if particle.pinned {
+            continue;
+        }
+
+        particle.force.y -= 9.81 * particle.mass;
+        particle.force += particle.velocity * -air_damping;
+
+        particle.velocity += particle.force / particle.mass * h;
+        particle.position += particle.velocity * h;
     }
 }
