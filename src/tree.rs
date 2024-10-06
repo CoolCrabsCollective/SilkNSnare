@@ -1,27 +1,22 @@
-use crate::game::get_initial_camera_transform;
+use crate::{
+    game::get_initial_camera_transform,
+    mesh_loader::{self, load_level, MeshLoader},
+};
 use bevy::prelude::*;
 
 pub struct TreePlugin;
-
-#[derive(Component)]
-struct Tree;
-
-#[derive(Resource)]
-struct TreeScene(Handle<Gltf>);
 
 const MAP_LIMIT: f32 = 0.75;
 
 impl Plugin for TreePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_tree);
-        app.add_systems(Update, create_tree_collider);
+        app.add_systems(Startup, spawn_tree.after(mesh_loader::setup));
         app.add_systems(Update, move_to_tree);
     }
 }
 
-fn spawn_tree(mut commands: Commands, asset_server: ResMut<AssetServer>) {
-    let gltf = asset_server.load("tree.glb");
-    commands.insert_resource(TreeScene(gltf));
+fn spawn_tree(asset_server: Res<AssetServer>, mesh_loader: ResMut<MeshLoader>) {
+    load_level(String::from("tree.glb"), asset_server, mesh_loader);
 }
 
 fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, time: Res<Time>) {
@@ -100,29 +95,4 @@ pub fn get_arena_center() -> Vec3 {
         get_target_camera_position().y,
         0.0,
     )
-}
-
-fn create_tree_collider(
-    mut commands: Commands,
-    gltf_assets: Res<Assets<Gltf>>,
-    tree_scene: Res<TreeScene>,
-    mut loaded: Local<bool>,
-) {
-    if *loaded {
-        return;
-    }
-
-    let Some(gltf) = gltf_assets.get(&tree_scene.0) else {
-        //println!("Waiting on loaded tree"); shut up lol
-        return;
-    };
-    *loaded = true;
-
-    //let tree_mesh: Handle<GltfMesh> = gltf.meshes[0];
-    commands.spawn(
-        (SceneBundle {
-            scene: gltf.scenes[0].clone(),
-            ..default()
-        }),
-    );
 }
