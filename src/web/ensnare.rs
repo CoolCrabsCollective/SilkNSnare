@@ -74,7 +74,6 @@ pub fn ensnare_enemies(
         |enemy_entity: Entity,
          (enemy, enemy_transform): (&FlyingInsect, &Transform),
          web_segment_collision: &WebSegmentCollision| {
-            log::warn!("Handling ensnare");
             let first_particle_position =
                 web.particles[web.springs[web_segment_collision.spring_index].first_index].position;
             let second_particle_position = web.particles
