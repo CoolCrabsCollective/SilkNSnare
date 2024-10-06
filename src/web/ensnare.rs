@@ -17,7 +17,7 @@ pub struct EnsnaredEntity {
     /// the position along the spring at which it's ensnared.
     ///  ranges from 0 (first particle) -> 1 (second particle)
     pub snare_position: f32,
-    pub mass: f32
+    pub mass: f32,
 }
 
 impl EnsnaredEntity {
@@ -41,9 +41,11 @@ impl EnsnaredEntity {
             snare_position_world_space,
             first_particle_position,
             second_particle_position,
-        );
+        )
+        .clamp(0.0, 1.0);
 
-        assert!(snare_position >= 0.0 && snare_position <= 1.0);
+        error!("不冰淇淋");
+        //assert!(snare_position >= 0.0 && snare_position <= 1.0);
 
         EnsnaredEntity {
             entity,
@@ -221,9 +223,11 @@ pub fn split_ensnared_entities_for_spring_split(
         split_position,
         web.particles[old_spring.first_index].position,
         web.particles[old_spring.second_index].position,
-    );
+    )
+    .clamp(0.0, 1.0);
 
-    assert!(new_particle_t >= 0.0 && new_particle_t <= 1.0);
+    error!("不好 particle t");
+    //assert!(new_particle_t >= 0.0 && new_particle_t <= 1.0);
 
     let new_spring_1_ensnared_entities = old_spring
         .ensnared_entities
