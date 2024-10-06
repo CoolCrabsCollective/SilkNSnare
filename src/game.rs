@@ -22,7 +22,6 @@ impl Plugin for GamePlugin {
             Update,
             (cycle_cubemap_asset, asset_loaded.after(cycle_cubemap_asset)),
         );
-        //app.add_systems(OnEnter(GameState::FightingInArena), reset_camera);
         app.add_plugins((
             RapierPhysicsPlugin::<NoUserData>::default(),
             RapierDebugRenderPlugin::default().disabled(),
@@ -35,8 +34,6 @@ impl Plugin for GamePlugin {
         })
         .insert_resource(ClearColor(Color::srgb(0.3, 0.6, 0.9)))
         .insert_resource(DirectionalLightShadowMap { size: 4096 });
-
-        //app.add_plugins(DebugCameraControllerPlugin);
     }
 }
 
@@ -218,16 +215,3 @@ fn cycle_cubemap_asset(
     cubemap.is_loaded = false;
 }
 
-/*
-fn reset_camera(
-    mut camera_query: Query<(&mut Transform, &mut Projection)>,
-    mut color: ResMut<ClearColor>,
-) {
-    let mut a = camera_query.single_mut();
-    (*a.0) = get_camera_position();
-
-    if let Perspective(pers_proj) = a.1.as_mut() {
-        pers_proj.fov = 10.0f32.to_radians();
-    }
-    color.0 = Color::rgb(0.3, 0.6, 0.9);
-}*/

@@ -97,18 +97,20 @@ pub fn ensnare_enemies(
                 );
             }
 
+            let t = snare_position.clamp(0.0, 1.0);
+
             let ensnared_entity = EnsnaredEntity {
                 entity: enemy_entity,
-                snare_position: snare_position.clamp(0.0, 1.0),
+                snare_position: t,
                 mass: enemy.weight,
             };
 
             commands.entity(enemy_entity).insert(Ensnared);
 
             spring.ensnared_entities.push(ensnared_entity);
-            web.particles[i1].impulse = Vec3::new(0.0, 0.0, 1.0) * 5000.0;
+            web.particles[i1].impulse = Vec3::new(0.0, 0.0, 1.0) * 10000.0 * (1.0 - t);
             web.particles[i1].impulse_duration = 0.1;
-            web.particles[i2].impulse = Vec3::new(0.0, 0.0, 1.0) * 5000.0;
+            web.particles[i2].impulse = Vec3::new(0.0, 0.0, 1.0) * 10000.0 * t;
             web.particles[i2].impulse_duration = 0.1;
         };
 
@@ -132,17 +134,10 @@ pub fn ensnare_enemies(
                 (Err(_), Ok(enemy), Err(_), Ok(web_segment_collision)) => {
                     handle_ensnare(*entity_b, enemy, web_segment_collision);
                 }
-                _ => {
-                    // the collision involved other entity types
-                }
+                _ => {}
             }
         }
-        // println!("Received collision event: {:?}", collision_event);
     }
-
-    // for contact_force_event in contact_force_events.read() {
-    //     println!("Received contact force event: {:?}", contact_force_event);
-    // }
 }
 
 pub fn debug_ensnare_entities(
