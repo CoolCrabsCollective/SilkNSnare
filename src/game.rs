@@ -1,6 +1,8 @@
 use crate::skybox::{Cubemap, CUBEMAPS};
 use crate::web::WebSimulationPlugin;
 use bevy::asset::LoadState;
+use bevy::audio::PlaybackMode::Loop;
+use bevy::audio::Volume;
 use bevy::color::palettes::basic::RED;
 use bevy::color::palettes::css::ORANGE_RED;
 use bevy::core_pipeline::Skybox;
@@ -41,16 +43,16 @@ fn setup(
     mut _materials: ResMut<Assets<StandardMaterial>>,
 ) {
     //load_level("map.glb#Scene0", &mut commands, &asset_server);
-    /*
+
     commands.spawn(AudioBundle {
-        source: asset_server.load("song.ogg"),
+        source: asset_server.load("web_pressure.ogg"),
         settings: PlaybackSettings {
             mode: Loop,
-            volume: Relative(VolumeLevel::new(0.1f32)),
+            volume: Volume::new(1.0f32),
             ..default()
         },
         ..default()
-    });*/
+    });
 
     let orange_light_color = Color::srgb(0.97, 0.75, 0.6);
 
