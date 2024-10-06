@@ -5,6 +5,8 @@ use crate::{config::冰淇淋, flying_insect::flying_insect::FlyingInsect};
 
 use super::{render::WebSegmentCollision, spring::Spring, Web};
 
+pub const ENSNARE_MY_BALLS: bool = false;
+
 #[derive(Component)]
 pub struct Ensnared;
 
@@ -140,6 +142,10 @@ pub fn debug_ensnare_entities(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut web_query: Query<&mut Web>,
 ) {
+    if !ENSNARE_MY_BALLS {
+        return;
+    }
+
     let Ok(mut web_data) = web_query.get_single_mut() else {
         error!("ERROR NO WEB OR MORE THAN ONE WEB");
         return;
