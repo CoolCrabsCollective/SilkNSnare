@@ -32,6 +32,15 @@ enum SpiderPosition {
 }
 
 impl SpiderPosition {
+    pub(crate) fn is_tree(&self) -> bool {
+        match self {
+            SpiderPosition::WEB(_, _) => false,
+            SpiderPosition::TREE(_) => true,
+        }
+    }
+}
+
+impl SpiderPosition {
     pub fn to_vec3(&self, 网: &Web) -> Vec3 {
         match self {
             SpiderPosition::WEB(第, t) => {
@@ -126,7 +135,7 @@ fn update_spider(
                 let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                 let p = ray.origin + ray.direction * λ;
 
-                set_new_target(p, &mut *spider, web);
+                set_new_target(p - spider.current_position.to_vec3(web), &mut *spider, web);
             }
         } else {
             println!("Cursor is not in the game window.");
@@ -217,62 +226,16 @@ fn rotate_spider(web: &Web, spider: &mut Spider, time: &Res<Time>) {
     }
 }
 
-fn set_new_target(mut target_position: Vec3, spider: &mut Spider, web: &mut Web) {
+fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
     let position = spider.current_position.to_vec3(web);
 
-    if (position - target_position).length_squared() < 0.01 {
+    if target_δ.length_squared() < 0.01 {
         return;
     }
 
     if NNN {
         spider.current_position = SpiderPosition::TREE(position);
-        spider.target_position = SpiderPosition::TREE(target_position);
-        return;
-    }
-
-    if (树里有点吗(position) && 树里有点吗(target_position)) {
-        spider.current_position = SpiderPosition::TREE(position);
-        spider.target_position = SpiderPosition::TREE(target_position);
-        let 向 = target_position - position;
-
-        let 结尾 = 树里的结尾(position, 向);
-
-        if 结尾.is_some() {
-            println!("Tree to Tree movement with silk");
-            let 开始 = 树里的开始(position, 向).unwrap();
-
-            web.particles.push(Particle {
-                position: 结尾.unwrap(),
-                velocity: Default::default(),
-                force: Default::default(),
-                mass: 0.0,
-                pinned: true,
-            });
-
-            web.particles.push(Particle {
-                position: 开始,
-                velocity: Default::default(),
-                force: Default::default(),
-                mass: 0.0,
-                pinned: true,
-            });
-
-            let p1 = web.particles.len() - 2;
-            let p2 = web.particles.len() - 1;
-
-            web.springs.push(Spring::new_with_length(
-                web,
-                p1,
-                p2,
-                20.0,
-                0.5,
-                (web.particles[p1].position - web.particles[p2].position).length() * 0.75,
-                vec![],
-            ));
-        } else {
-            println!("Tree to Tree movement no silk");
-        }
-
+        spider.target_position = SpiderPosition::TREE(position + target_δ);
         return;
     }
 
@@ -282,15 +245,20 @@ fn set_new_target(mut target_position: Vec3, spider: &mut Spider, web: &mut Web)
         SpiderPosition::TREE(_) => None,
     };
 
-    let move_dir = (target_position - position).normalize();
+    let target_dir = target_δ.normalize();
+    let mut target_pos = position + target_dir * 10.0;
 
     for i in 0..web.springs.len() {
+        if from_spring_idx.is_some() && from_spring_idx.unwrap() == i {
+            continue;
+        }
+
         let spring = &web.springs[i];
         let result = spring.intersects(
             web,
             Vec3::new(0.0, 0.0, -1.0),
-            position - move_dir * 10.0,
-            target_position + move_dir * 10.0,
+            position - target_dir,
+            position + target_dir * 10.0,
         );
 
         if result.is_none() {
@@ -299,28 +267,60 @@ fn set_new_target(mut target_position: Vec3, spider: &mut Spider, web: &mut Web)
 
         let new_pos = result.unwrap();
 
-        if new_pos.dot(move_dir) - position.dot(move_dir) <= 0.1 {
+        if target_dir.dot(new_pos) - target_dir.dot(position) <= 0.05 {
             continue;
         }
 
-        if new_pos.dot(move_dir) >= target_position.dot(move_dir) {
+        if target_dir.dot(new_pos) >= target_dir.dot(target_pos) {
             continue;
         }
 
-        target_position = new_pos;
+        target_pos = new_pos;
         dest_spring_idx = Some(i);
     }
 
     let existing_p1 = web.get_particle_index(position, 0.1);
-    let existing_p2 = web.get_particle_index(target_position, 0.1);
+    let existing_p2 = web.get_particle_index(target_pos, 0.1);
 
     if existing_p1 == existing_p2 && existing_p1.is_some() {
         return; // not initiating to move far enough to initiate movement
     }
 
-    if dest_spring_idx.is_none() && from_spring_idx.is_none() {
-        //panic!("THIS SHOULD NEVER HAPPEN IF THIS HAPPEN DESTROY YOUR PC AND ANY OTHER EVIDENCE OF IT HAPPENING");
-        return;
+    // no destination found, set target_pos from nearest tree point
+    if dest_spring_idx.is_none() {
+        let result = 树里的开始(position - target_dir * 0.1, target_dir);
+
+        if result.is_none() {
+            println!("Tree to Tree movement no silk");
+            spider.current_position = SpiderPosition::TREE(position);
+            spider.target_position = SpiderPosition::TREE(position + target_δ);
+            return;
+        }
+
+        target_pos = result.unwrap() + target_dir * 0.1;
+
+        if 树里有点吗(position) || 树里有点吗(position - target_dir * 0.1) {
+            let 结尾 = 树里的结尾(position - target_dir * 0.1, target_dir);
+
+            if 结尾.is_none() {
+                println!("Tree to Tree movement no silk");
+                spider.current_position = SpiderPosition::TREE(position);
+                spider.target_position = SpiderPosition::TREE(target_pos);
+                return;
+            }
+        }
+    }
+
+    if from_spring_idx.is_some() {
+        let from_spring: &Spring = &web.springs[from_spring_idx.unwrap()];
+
+        if existing_p2.is_some()
+            && (from_spring.first_index == existing_p2.unwrap()
+                || from_spring.first_index == existing_p1.unwrap())
+        {
+            // move within the existing spring
+            // find t from target
+        }
     }
 
     if existing_p1.is_some() && existing_p2.is_some() {
@@ -328,6 +328,10 @@ fn set_new_target(mut target_position: Vec3, spider: &mut Spider, web: &mut Web)
 
         if spring_idx.is_some() {
             let spring = &web.springs[spring_idx.unwrap()];
+            let target = position + target_δ;
+
+            // find t from target
+
             let t = if spring.first_index == existing_p1.unwrap() {
                 1.0
             } else {
@@ -336,6 +340,7 @@ fn set_new_target(mut target_position: Vec3, spider: &mut Spider, web: &mut Web)
             spider.current_position = SpiderPosition::WEB(spring_idx.unwrap(), 1.0 - t);
             spider.target_position = SpiderPosition::WEB(spring_idx.unwrap(), t);
             println!("Path is along existing spring");
+            return;
         }
     }
 
@@ -359,14 +364,14 @@ fn set_new_target(mut target_position: Vec3, spider: &mut Spider, web: &mut Web)
     let p2 = if existing_p2.is_none() {
         if dest_spring_idx.is_none() {
             web.particles.push(Particle {
-                position: target_position,
+                position: target_pos,
                 velocity: Default::default(),
                 force: Default::default(),
                 mass: 0.0,
                 pinned: true,
             });
         } else {
-            web.split_spring(dest_spring_idx.unwrap(), target_position);
+            web.split_spring(dest_spring_idx.unwrap(), target_pos);
         }
         web.particles.len() - 1
     } else {

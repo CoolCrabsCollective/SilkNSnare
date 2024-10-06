@@ -7,6 +7,9 @@ use bevy::prelude::{
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
+use bevy::log::error;
+use crate::web::ensnare::EnsnaredEntity;
+use crate::web::Web;
 
 pub struct FlyingInsectPlugin;
 
@@ -23,6 +26,29 @@ impl Plugin for FlyingInsectPlugin {
             timer: Timer::new(Duration::from_millis(500), TimerMode::Repeating),
         });
     }
+}
+
+fn debug_enstare_bug(
+    mut fly_query: Query<(&FlyingInsect, &Transform, Entity)>,
+    mut web_query: Query<&mut Web>
+) {
+    let Ok(mut web_data) = web_query.get_single_mut() else {
+        error!("ERROR NO WEB OR MORE THAN ONE WEB");
+        return;
+    };
+
+    let Ok((insect, _, fly_entity)) = fly_query.get_single_mut() else {
+        error!("ERROR NO fly");
+        return;
+    };
+
+    let spring = web_data.springs.get_mut(0).unwrap();
+    let ensnared = EnsnaredEntity{
+        entity: fly_entity.clone(),
+        snare_position: 0.5,
+        mass: insect.weight,
+    };
+    spring.ensnared_entities.push(ensnared);
 }
 
 pub struct BezierCurve {
@@ -96,6 +122,7 @@ pub struct FlyingInsect {
     weight: f32,
     offset: f32,
     path: BezierCurve,
+    break_free_position: Vec3,
 }
 
 impl FlyingInsect {
@@ -107,6 +134,7 @@ impl FlyingInsect {
             weight,
             offset: rng.gen_range(0.0..2.0 * PI),
             path: bezier,
+            break_free_position: Vec3::new(0.0, 0.0, 0.0),
         }
     }
 }
@@ -127,7 +155,8 @@ fn move_flying_insect(
                     0.0,
                     (2.0 * PI * time.elapsed_seconds() * 0.65 + fly.offset).sin() * 0.05,
                     0.0,
-                );
+                )
+                + fly.break_free_position;
 
             let tangent = fly.path.tangent_at(fly.progress).normalize();
             let up = Vec3::new(0.0, 1.0, 0.0);

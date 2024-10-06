@@ -11,6 +11,7 @@ pub struct EnsnaredEntity {
     /// the position along the spring at which it's ensnared.
     ///  ranges from 0 (first particle) -> 1 (second particle)
     pub snare_position: f32,
+    pub mass: f32
 }
 
 impl EnsnaredEntity {
@@ -54,6 +55,7 @@ pub fn debug_ensnare_entities(
             spring.ensnared_entities.push(EnsnaredEntity {
                 entity: entity.id(),
                 snare_position: random_position,
+                mass: 0.0
             });
         }
     }
@@ -113,6 +115,7 @@ pub fn split_ensnared_entities_for_spring_split(
             EnsnaredEntity {
                 entity: ensnared.entity.clone(),
                 snare_position,
+                mass: ensnared.mass
             }
         })
         .collect();
@@ -129,6 +132,7 @@ pub fn split_ensnared_entities_for_spring_split(
             EnsnaredEntity {
                 entity: ensnared.entity.clone(),
                 snare_position,
+                mass: ensnared.mass
             }
         })
         .collect();
