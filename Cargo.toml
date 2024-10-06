@@ -11,6 +11,7 @@ rand = "0.8.5"
 bevy_rapier3d = "0.27.0"
 bevy_mod_raycast = "0.18.0"
 queues = "1.0.2"
+tokio = "1.40.0"
 
 [profile.dev]
 opt-level = 1
