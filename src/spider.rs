@@ -1,10 +1,14 @@
 use crate::tree::{树里有点吗, 树里的开始, 树里的结尾};
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
-use bevy::log;
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier3d::na::ComplexField;
 use std::f32::consts::PI;
+use std::time::Duration;
+use bevy_rapier3d::pipeline::CollisionEvent;
+use crate::flying_insect::flying_insect::FlyingInsect;
+use crate::web::ensnare::Ensnared;
+use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 
 pub const NNN: bool = false; // currently october, set this to true in november
 pub const SPIDER_ROTATE_SPEED: f32 = 5.6;
@@ -17,6 +21,11 @@ struct WebPlane {
     left: Vec3,
 }
 
+#[derive(Resource)]
+pub struct SnareTimer {
+    pub timer: Timer,
+}
+
 #[derive(Component)]
 struct Spider {
     food: f64,
@@ -24,6 +33,7 @@ struct Spider {
     current_position: SpiderPosition,
     current_rotation: f32,
     target_position: SpiderPosition,
+    snaring_insect: Option<Entity>
 }
 
 #[derive(Copy, Clone)]
@@ -91,6 +101,7 @@ impl Spider {
             target_position: SpiderPosition::TREE(pos),
             current_position: SpiderPosition::TREE(pos),
             current_rotation: 0.0,
+            snaring_insect: None
         }
     }
 }
@@ -99,9 +110,16 @@ impl Plugin for SpiderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_spider);
         app.add_systems(Update, update_spider);
+        app.add_systems(Update, snare_insect);
         app.insert_resource(WebPlane {
             plane: Vec4::new(0.0, 0.0, -1.0, 0.0),
             left: Vec3::new(0.0, 1.0, 0.0),
+        });
+        app.insert_resource(SnareTimer {
+            timer: Timer::new(
+                Duration::from_millis(2000 ),
+                TimerMode::Repeating,
+            )
         });
     }
 }
@@ -146,6 +164,7 @@ fn update_spider(
     move_spider(web, &mut *spider, &time);
     rotate_spider(web, &mut *spider, &time);
     spider_transform.translation = spider.current_position.to_vec3(web);
+    spider_transform.translation.z += 0.05;
 
     let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
     let base_transform_mat = Mat3::from_cols(
@@ -158,6 +177,104 @@ fn update_spider(
             * Quat::from_mat3(&base_transform_mat);
 }
 
+fn snare_insect(
+    mut commands: Commands,
+    mut spider_query: Query<(&mut Spider, Entity)>,
+    insects_query: Query<(&FlyingInsect, &Transform), With<Ensnared>>,
+    mut collision_events: EventReader<CollisionEvent>,
+    time: Res<Time>,
+    mut ss_snare_timer: ResMut<SnareTimer>
+) {
+    let result = spider_query.get_single_mut();
+
+    if !result.is_ok() {
+        println!("F U C K!!! NO FUCKING SPIDERRRRR");
+        return;
+    }
+
+    let (mut spider, s_entity) = result.unwrap();
+
+    if spider.snaring_insect == None {
+        for collision_event in collision_events.read() {
+            if let CollisionEvent::Started(entity_a, entity_b, _) = collision_event {
+                match (
+                    s_entity == *entity_a,
+                    s_entity == *entity_b,
+                    insects_query.get(*entity_a),
+                    insects_query.get(*entity_b)
+                ) {
+                    (true, false, Ok(_), Err(_)) => {
+                        spider.snaring_insect = Some(*entity_b);
+                    }
+                    (true, false, Err(_), Ok(_)) => {
+                        spider.snaring_insect = Some(*entity_b);
+                    }
+                    (false, true, Ok(_), Err(_)) => {
+                        spider.snaring_insect = Some(*entity_a);
+                    }
+                    (false, true, Err(_), Ok(_)) => {
+                        spider.snaring_insect = Some(*entity_a);
+                    }
+                    _ => {
+                        // the collision involved other entity types
+                    }
+                }
+            }
+        }
+    } else {
+        let mut still_snaring = true;
+        for collision_event in collision_events.read() {
+            if let CollisionEvent::Stopped(entity_a, entity_b, _) = collision_event {
+                match (
+                    s_entity == *entity_a,
+                    s_entity == *entity_b,
+                    spider.snaring_insect.unwrap() == *entity_a,
+                    spider.snaring_insect.unwrap() == *entity_b
+                ) {
+                    (true, false, true, false) => {
+                        still_snaring = false;
+                    }
+                    (true, false, false, true) => {
+                        still_snaring = false;
+                    }
+                    (false, true, true, false) => {
+                        still_snaring = false;
+                    }
+                    (false, true, false, true) => {
+                        still_snaring = false;
+                    }
+                    _ => {
+                        // the collision involved other entity types
+                    }
+                }
+
+                if !still_snaring {
+                    break;
+                }
+            }
+        }
+
+        if !still_snaring {
+            spider.snaring_insect = None;
+            ss_snare_timer.timer.reset();
+            ss_snare_timer.timer.pause();
+            return;
+        }
+
+        if ss_snare_timer.timer.paused() {
+            ss_snare_timer.timer.unpause()
+        }
+        ss_snare_timer.timer.tick(time.delta());
+
+        if ss_snare_timer.timer.just_finished() {
+            ss_snare_timer.timer.reset();
+            ss_snare_timer.timer.pause();
+
+            commands.entity(spider.snaring_insect.unwrap()).despawn();
+            spider.snaring_insect = None;
+        }
+    }
+}
 fn move_spider(web: &Web, spider: &mut Spider, time: &Res<Time>) {
     if spider.current_position.同(&spider.target_position) {
         return; // spider not moving
@@ -273,7 +390,6 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         let dir_len = dir.length();
 
         dir = dir.normalize();
-        // dbg!(dir.dot(target_dir));
         if dir.dot(target_dir) > 0.98 {
             let delta_t = (target_δ.dot(dir).abs() / dir_len);
             spider.target_position =
@@ -309,7 +425,6 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 }
 
                 dir = dir.normalize();
-                // dbg!(dir.dot(target_dir));
                 if dir.dot(target_dir) > 0.98 {
                     let delta_t = (target_δ.dot(dir).abs() / dir_len).clamp(0.0, 1.0);
                     spider.current_position = SpiderPosition::WEB(i, t);
@@ -410,9 +525,13 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         }
     }
 
+    let hack_spring_count = web.springs.len();
+    let mut hack_swap_removed_a_spring = false;
+
     let p1 = if existing_p1.is_none() {
         if let Some((from_spring_index, _)) = from_spring {
             web.split_spring(from_spring_index, position);
+            hack_swap_removed_a_spring = true;
         } else {
             web.particles.push(Particle {
                 position: position,
@@ -441,6 +560,14 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 pinned: true,
             });
         } else {
+            // HORRIBLE HACK
+            // basically this means that dest_spring_idx got invalidated in the
+            // above call to split_spring due to a swap_remove call that happens inside it
+            // so we detect this side effect and correct the index
+            if hack_swap_removed_a_spring && dest_spring_idx.unwrap() == hack_spring_count - 1 {
+                dest_spring_idx = Some(from_spring.unwrap().0);
+            }
+
             web.split_spring(dest_spring_idx.unwrap(), target_pos);
         }
         web.particles.len() - 1
@@ -457,6 +584,7 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         (web.particles[p1].position - web.particles[p2].position).length() * 0.75,
         vec![],
     ));
+
     spider.current_position = SpiderPosition::WEB(web.springs.len() - 1, 0.0);
     spider.target_position = SpiderPosition::WEB(web.springs.len() - 1, 1.0);
     println!("New path created");
@@ -489,5 +617,8 @@ fn spawn_spider(
             inherited_visibility: Default::default(),
             view_visibility: Default::default(),
         },
-    ));
+        Collider::capsule_y(1.0, 1.0),
+    ))
+    .insert(ActiveEvents::COLLISION_EVENTS)
+    .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC);;
 }
