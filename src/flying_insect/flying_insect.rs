@@ -1,5 +1,5 @@
 use crate::flying_insect::fruit_fly::spawn_fruit_fly;
-use crate::web::ensnare::Ensnared;
+use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::ensnare::EnsnaredEntity;
 use crate::web::Web;
 use bevy::app::{App, Plugin, Update};
@@ -128,7 +128,7 @@ impl FlyingInsect {
                 TimerMode::Repeating,
             ),
             freed_timer: Timer::new(
-                Duration::from_secs(30),
+                Duration::from_secs(15),
                 TimerMode::Repeating,
             ),
         };
@@ -180,6 +180,8 @@ fn move_flying_insect(
 }
 
 fn insect_ensnared_tick_cooking_and_free(
+    mut commands: Commands,
+    mut web_query: Query<&mut Web>,
     mut insect_query: Query<(&mut FlyingInsect, Entity), With<Ensnared>>,
     time: Res<Time>,
 ) {
@@ -190,7 +192,7 @@ fn insect_ensnared_tick_cooking_and_free(
 
         insect.freed_timer.tick(time.delta());
         if insect.freed_timer.just_finished() {
-            // todo: free insect from web
+            free_enemy_from_web(&mut commands, entity, &mut web_query);
 
             insect.cooking_timer.reset();
             insect.cooking_timer.pause();

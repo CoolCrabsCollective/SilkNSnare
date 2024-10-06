@@ -11,6 +11,9 @@ pub const ENSNARE_MY_BALLS: bool = false;
 #[derive(Component)]
 pub struct Ensnared;
 
+#[derive(Component)]
+pub struct Freed;
+
 #[derive(Debug, Clone)]
 pub struct EnsnaredEntity {
     /// the entity that is snared in the web
@@ -70,7 +73,7 @@ impl EnsnaredEntity {
 
 pub fn ensnare_enemies(
     mut commands: Commands,
-    enemies_query: Query<(&FlyingInsect, &Transform), Without<Ensnared>>,
+    enemies_query: Query<(&FlyingInsect, &Transform), (Without<Ensnared>, Without<Freed>)>,
     web_segment_collisions_query: Query<&WebSegmentCollision>,
     mut web_query: Query<&mut Web>,
     mut collision_events: EventReader<CollisionEvent>,
@@ -148,6 +151,26 @@ pub fn ensnare_enemies(
                     handle_ensnare(*entity_b, enemy, web_segment_collision);
                 }
                 _ => {}
+            }
+        }
+    }
+}
+
+pub fn free_enemy_from_web(mut commands: &mut Commands, entity: Entity, mut web_query: &mut Query<&mut Web>) {
+    let Ok(mut web) = web_query.get_single_mut() else {
+        error!("ERROR NO WEB OR MORE THAN ONE WEB");
+        return;
+    };
+
+    commands.entity(entity).remove::<Ensnared>();
+    commands.entity(entity).insert(Freed);
+
+    for mut spring in &mut web.springs {
+        for i in 0..spring.ensnared_entities.len() {
+            if spring.ensnared_entities.get(i).unwrap().entity == entity {
+                spring.ensnared_entities.swap_remove(i);
+                // TODO: add force upon freeing of insect
+                break;
             }
         }
     }
