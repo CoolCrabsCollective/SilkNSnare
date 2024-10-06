@@ -9,7 +9,7 @@ use bevy::{
 
 use super::Web;
 
-pub const WEB_SILK_THICKNESS: f32 = 0.025;
+pub const WEB_SILK_THICKNESS: f32 = 0.01;
 
 #[derive(Component)]
 pub struct WebRenderSegment(Handle<Mesh>);

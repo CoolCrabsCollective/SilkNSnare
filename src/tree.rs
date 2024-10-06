@@ -6,6 +6,8 @@ use bevy::prelude::*;
 
 pub struct TreePlugin;
 
+const MAP_LIMIT: f32 = 0.75;
+
 impl Plugin for TreePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_tree.after(mesh_loader::setup));
@@ -27,7 +29,60 @@ fn move_to_tree(mut camera_transform_query: Query<(&mut Transform, &Camera)>, ti
 }
 
 pub fn 树里有点吗(点: Vec3) -> bool {
-    (get_arena_center() - 点).length_squared() > 1.0
+    let 差 = (get_arena_center() - 点);
+    差.y > MAP_LIMIT || 差.y < -MAP_LIMIT
+}
+
+pub fn 树里的开始(mut 点: Vec3, 向: Vec3) -> Option<Vec3> {
+    if 向.y > 0.0 {
+        if 点.y > get_arena_center().y + MAP_LIMIT {
+            return None;
+        }
+
+        let y = get_arena_center().y + MAP_LIMIT;
+        let t = (y - 点.y) / 向.y;
+        if t > 1.0 {
+            return None;
+        }
+
+        return Some(点 + t * 向);
+    }
+
+    if 点.y < get_arena_center().y - MAP_LIMIT {
+        return None;
+    }
+    let y = get_arena_center().y - MAP_LIMIT;
+    let t = (y - 点.y) / 向.y;
+    if t > 1.0 {
+        return None;
+    }
+    Some(点 + t * 向)
+}
+
+pub fn 树里的结尾(点: Vec3, 向: Vec3) -> Option<Vec3> {
+    if 向.y > 0.0 {
+        if 点.y > get_arena_center().y - MAP_LIMIT {
+            return None;
+        }
+
+        let y = get_arena_center().y - MAP_LIMIT;
+        let t = (y - 点.y) / 向.y;
+        if t > 1.0 {
+            return None;
+        }
+        return Some(点 + t * 向);
+    }
+
+    if 点.y < get_arena_center().y + MAP_LIMIT {
+        return None;
+    }
+
+    let y = get_arena_center().y + MAP_LIMIT;
+    let t = (y - 点.y) / 向.y;
+    if t > 1.0 {
+        return None;
+    }
+    Some(点 + t * 向)
 }
 
 pub fn get_target_camera_position() -> Vec3 {
