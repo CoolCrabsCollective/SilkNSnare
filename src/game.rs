@@ -86,6 +86,7 @@ fn setup(
             fov: 60.0f32.to_radians(),
             ..default()
         }),
+
         ..default()
     });
     /*.insert(PostProcessSettings {
