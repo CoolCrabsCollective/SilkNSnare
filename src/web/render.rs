@@ -15,6 +15,7 @@ pub const WEB_SILK_THICKNESS: f32 = 0.05;
 #[derive(Component)]
 pub struct WebRenderMesh {
     mesh_handle: Handle<Mesh>,
+    material_handle: Handle<StandardMaterial>,
 }
 
 /// used only for collision
@@ -26,6 +27,7 @@ pub struct WebSegmentCollision {
 pub fn clear_web(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     web_render_segments_query: Query<(Entity, &WebRenderMesh)>,
     web_segment_collisions_query: Query<(Entity, &WebSegmentCollision)>,
 ) {
@@ -33,10 +35,12 @@ pub fn clear_web(
         web_render_segment_entity,
         WebRenderMesh {
             mesh_handle: web_segment_mesh_handle,
+            material_handle: web_segment_material_handle,
         },
     ) in web_render_segments_query.iter()
     {
         meshes.remove(web_segment_mesh_handle);
+        materials.remove(web_segment_material_handle);
         commands.entity(web_render_segment_entity).despawn();
     }
 
@@ -47,8 +51,8 @@ pub fn clear_web(
 
 pub fn render_web(
     mut commands: Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     web_query: Query<&Web>,
     camera_query: Query<(&Transform, &Camera)>,
     time: Res<Time>,
@@ -66,7 +70,11 @@ pub fn render_web(
     let (mesh, segment_colliders) = create_web_mesh(&web_data, camera_transform);
     let mesh_handle: Handle<Mesh> = meshes.add(mesh);
 
-    let t = (time.elapsed_seconds() / 4.0).min(1.0);
+    let color_t = (time.elapsed_seconds() / 4.0).min(1.0);
+    let material_handle: Handle<StandardMaterial> = materials.add(StandardMaterial {
+        base_color: Color::srgb(color_t, 0.0, 0.0),
+        ..default()
+    });
 
     for (segment_collider, spring_index) in segment_colliders {
         commands
@@ -78,14 +86,12 @@ pub fn render_web(
     commands.spawn((
         PbrBundle {
             mesh: mesh_handle.clone(),
-            material: materials.add(StandardMaterial {
-                base_color: Color::srgb(t, 0.0, 0.0),
-                ..default()
-            }),
+            material: material_handle.clone(),
             ..default()
         },
         WebRenderMesh {
             mesh_handle: mesh_handle.clone(),
+            material_handle: material_handle.clone(),
         },
     ));
 }
