@@ -58,21 +58,20 @@ pub fn render_web(
     time: Res<Time>,
 ) {
     let Ok(web_data) = web_query.get_single() else {
-        log::error!("ERROR NO WEB OR MORE THAN ONE WEB");
+        error!("ERROR NO WEB OR MORE THAN ONE WEB");
         return;
     };
 
     let Ok((camera_transform, _)) = camera_query.get_single() else {
-        log::error!("ERROR NO CAMERA OR MORE THAN ONE CAMERA");
+        error!("ERROR NO CAMERA OR MORE THAN ONE CAMERA");
         return;
     };
 
     let (mesh, segment_colliders) = create_web_mesh(&web_data, camera_transform);
     let mesh_handle: Handle<Mesh> = meshes.add(mesh);
 
-    let color_t = (time.elapsed_seconds() / 4.0).min(1.0);
     let material_handle: Handle<StandardMaterial> = materials.add(StandardMaterial {
-        base_color: Color::srgb(color_t, 0.0, 0.0),
+        base_color: Color::srgb(0.8, 0.8, 0.8),
         ..default()
     });
 
