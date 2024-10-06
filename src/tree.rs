@@ -5,6 +5,8 @@ use crate::{
     mesh_loader::{self, load_level, MeshLoader},
 };
 use bevy::prelude::*;
+use bevy_rapier3d::plugin::RapierContext;
+use bevy_rapier3d::prelude::QueryFilter;
 
 pub struct TreePlugin;
 
@@ -83,25 +85,34 @@ fn move_to_tree(
     }
 }
 
-pub fn 树里有点吗(点: Vec3) -> bool {
+pub fn 树里有点吗(点: Vec3, rapier_context: &Res<RapierContext>) -> bool {
     if !照相机里有点吗(点) {
         return false;
     }
 
-    let 差 = get_arena_center() - 点;
+    let told_me = rapier_context.cast_ray(
+        点 + Vec3::new(0.0, 0.0, 1.0),
+        Vec3::new(0.0, 0.0, -1.0),
+        2.0,
+        true,
+        QueryFilter::default(),
+    );
 
-    差.y > TREE_LIMIT || 差.y < -TREE_LIMIT
+    if let Some((body, once)) = told_me {
+        return true;
+    }
+    false
 }
 
-pub fn 树里有小路吗(开始: Vec3, 结尾: Vec3) -> bool {
-    if !树里有点吗(开始) || !树里有点吗(结尾) {
+pub fn 树里有小路吗(开始: Vec3, 结尾: Vec3, rapier_context: &Res<RapierContext>) -> bool {
+    if !树里有点吗(开始, rapier_context) || !树里有点吗(结尾, rapier_context) {
         return false;
     }
 
     // 如果不好提高这号码
     for i in 1..10 {
         let t = i as f32 / 10.0;
-        if !树里有点吗(开始 * t + 结尾 * (1.0 - t)) {
+        if !树里有点吗(开始 * t + 结尾 * (1.0 - t), rapier_context) {
             return false;
         }
     }

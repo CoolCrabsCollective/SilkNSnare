@@ -6,6 +6,7 @@ use crate::web::{Particle, Web};
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier3d::na::ComplexField;
 use bevy_rapier3d::pipeline::CollisionEvent;
+use bevy_rapier3d::plugin::RapierContext;
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 use std::f32::consts::PI;
 use std::time::Duration;
@@ -128,6 +129,7 @@ fn update_spider(
     time: Res<Time>,
     mut web_query: Query<&mut Web>,
     spider_plane: Res<WebPlane>,
+    rapier_context: Res<RapierContext>,
 ) {
     let result = spider_query.get_single_mut();
 
@@ -149,7 +151,12 @@ fn update_spider(
                 let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                 let p = ray.origin + ray.direction * λ;
 
-                set_new_target(p - spider.current_position.to_vec3(web), &mut *spider, web);
+                set_new_target(
+                    p - spider.current_position.to_vec3(web),
+                    &mut *spider,
+                    web,
+                    &rapier_context,
+                );
             }
         }
     }
@@ -280,7 +287,8 @@ fn handle_ensnared_insect_collision(
             ss_snare_timer.timer.pause();
 
             // Mark insect as rolled, wait on timeout before allowing to eat
-            let mut insect  = insects_query.get_mut(spider.snaring_insect.unwrap())
+            let mut insect = insects_query
+                .get_mut(spider.snaring_insect.unwrap())
                 .expect("FUCK NO ENSNARED BUG");
             insect.ensnared_and_rolled = true;
             spider.snaring_insect = None;
@@ -357,7 +365,12 @@ fn rotate_spider(web: &Web, spider: &mut Spider, time: &Res<Time>) {
     }
 }
 
-fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
+fn set_new_target(
+    target_δ: Vec3,
+    spider: &mut Spider,
+    web: &mut Web,
+    rapier_context: &Res<RapierContext>,
+) {
     let position = spider.current_position.to_vec3(web);
 
     if target_δ.length_squared() < 0.01 {
@@ -493,24 +506,24 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         target_pos = position + target_δ;
 
         let mut i = 0;
-        while !树里有点吗(target_pos) && i < 10 {
+        while !树里有点吗(target_pos, rapier_context) && i < 10 {
             target_pos += target_dir * 0.1;
             i += 1;
         }
 
-        if !树里有点吗(target_pos) {
+        if !树里有点吗(target_pos, rapier_context) {
             // 这个向没有树
             println!("Clicked in direction with nothing in front, doing nothing");
             return;
         }
 
-        if 树里有小路吗(position, target_pos) {
+        if 树里有小路吗(position, target_pos, rapier_context) {
             println!("Tree to Tree movement no silk");
             spider.current_position = SpiderPosition::TREE(position);
             spider.target_position = SpiderPosition::TREE(position + target_δ);
             return;
         }
-    } else if 树里有小路吗(position, target_pos) {
+    } else if 树里有小路吗(position, target_pos, rapier_context) {
         println!("Tree to Tree movement no silk");
         spider.current_position = SpiderPosition::TREE(position);
         spider.target_position = SpiderPosition::TREE(position + target_δ);
