@@ -1,4 +1,4 @@
-use crate::fruit_fly::FruitFlyPlugin;
+use crate::flying_insect::flying_insect::FlyingInsectPlugin;
 use crate::game::GamePlugin;
 use crate::mesh_loader::MeshLoaderPlugin;
 use crate::spider::SpiderPlugin;
@@ -11,12 +11,13 @@ use bevy::DefaultPlugins;
 use tree::TreePlugin;
 
 mod config;
-mod fruit_fly;
 mod game;
 mod mesh_loader;
 mod spider;
 mod tree;
 mod web;
+
+mod flying_insect;
 
 fn main() {
     let mut app = App::new();
@@ -58,7 +59,7 @@ fn main() {
     app.add_plugins(MeshLoaderPlugin);
     app.add_plugins(TreePlugin);
     app.add_plugins(SpiderPlugin);
-    app.add_plugins(FruitFlyPlugin);
+    app.add_plugins(FlyingInsectPlugin);
 
     app.run();
 }
