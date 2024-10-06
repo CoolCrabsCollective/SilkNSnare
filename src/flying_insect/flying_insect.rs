@@ -171,7 +171,6 @@ fn move_flying_insect(
 
             let tangent = fly.path.tangent_at(fly.progress).normalize();
             let up = Vec3::new(0.0, 1.0, 0.0);
-            let left = up.cross(tangent);
             let base_transform_mat = Mat3::from_cols(
                 Vec3::new(-1.0, 0.0, 0.0),
                 Vec3::new(0.0, 0.0, 1.0),

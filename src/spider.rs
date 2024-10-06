@@ -239,14 +239,58 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
         return;
     }
 
+    let target_dir = target_δ.normalize();
+    let mut target_pos = position + target_dir * 10.0;
+
     let mut dest_spring_idx: Option<usize> = None;
     let mut from_spring_idx: Option<usize> = match spider.current_position {
         SpiderPosition::WEB(idx, _) => Some(idx),
         SpiderPosition::TREE(_) => None,
     };
 
-    let target_dir = target_δ.normalize();
-    let mut target_pos = position + target_dir * 10.0;
+    let mut from_particle_idx: Option<usize> = None;
+
+    if from_spring_idx.is_some() {
+        let from_spring: &Spring = &web.springs[from_spring_idx.unwrap()];
+
+        let t = match spider.current_position {
+            SpiderPosition::WEB(_, t) => t,
+            _ => -1.0,
+        };
+
+        if t == 0.0 {
+            from_particle_idx = Some(from_spring.first_index);
+        } else if t == 1.0 {
+            from_particle_idx = Some(from_spring.second_index);
+        }
+    }
+
+    if from_particle_idx.is_some() {
+        for i in 0..web.springs.len() {
+            let spring: &Spring = &web.springs[i];
+
+            if spring.first_index == from_particle_idx.unwrap()
+                || spring.second_index == from_particle_idx.unwrap()
+            {
+                let mut dir = web.particles[spring.second_index].position
+                    - web.particles[spring.first_index].position;
+                let mut t = 0.0;
+
+                if spring.second_index == from_particle_idx.unwrap() {
+                    dir *= -1.0;
+                    t = 1.0;
+                }
+
+                dir = dir.normalize();
+                if dir.dot(target_dir) > 0.98 {
+                    spider.current_position = SpiderPosition::WEB(i, t);
+                    spider.target_position = SpiderPosition::WEB(i, 1.0 - t);
+                    println!("Moving along spring from particle location");
+                    return;
+                }
+            }
+        }
+    }
 
     for i in 0..web.springs.len() {
         if from_spring_idx.is_some() && from_spring_idx.unwrap() == i {
@@ -330,13 +374,17 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
             let spring = &web.springs[spring_idx.unwrap()];
             let target = position + target_δ;
 
-            // find t from target
+            let spring_p1 = web.particles[spring.first_index].position;
+            let spring_p2 = web.particles[spring.second_index].position;
 
-            let t = if spring.first_index == existing_p1.unwrap() {
-                1.0
-            } else {
-                0.0
-            };
+            // find t from target
+            let mut t =
+                (target.length() - spring_p1.length()) / (spring_p2.length() - spring_p1.length());
+
+            if spring.first_index == existing_p1.unwrap() {
+                t = 1.0 - t;
+            }
+
             spider.current_position = SpiderPosition::WEB(spring_idx.unwrap(), 1.0 - t);
             spider.target_position = SpiderPosition::WEB(spring_idx.unwrap(), t);
             println!("Path is along existing spring");
@@ -350,6 +398,8 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 position: position,
                 velocity: Default::default(),
                 force: Default::default(),
+                impulse: Default::default(),
+                impulse_duration: 0.0,
                 mass: 0.0,
                 pinned: true,
             });
@@ -367,6 +417,8 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
                 position: target_pos,
                 velocity: Default::default(),
                 force: Default::default(),
+                impulse: Default::default(),
+                impulse_duration: 0.0,
                 mass: 0.0,
                 pinned: true,
             });
@@ -389,6 +441,7 @@ fn set_new_target(target_δ: Vec3, spider: &mut Spider, web: &mut Web) {
     ));
     spider.current_position = SpiderPosition::WEB(web.springs.len() - 1, 0.0);
     spider.target_position = SpiderPosition::WEB(web.springs.len() - 1, 1.0);
+    println!("New path created");
 }
 
 fn spawn_spider(
