@@ -87,7 +87,7 @@ pub fn ensnare_enemies(
                 / (second_particle_position - first_particle_position)
                     .dot(second_particle_position - first_particle_position);
 
-            if snare_position < 0.0 || snare_position > 1.0 {
+            if snare_position < -0.1 || snare_position > 1.1 {
                 log::error!("NOT 冰淇淋, first_particle_position={first_particle_position}, second_particle_position={second_particle_position}, enemy_position={enemy_position}, snare_position={snare_position}");
             }
 

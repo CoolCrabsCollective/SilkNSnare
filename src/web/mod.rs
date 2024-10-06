@@ -10,7 +10,7 @@ use ensnare::{debug_ensnare_entities, ensnare_enemies, update_ensnared_entities}
 use render::{clear_web, render_web};
 use std::f32::consts::PI;
 
-pub const START_WITH_A_WEB: bool = true;
+pub const START_WITH_A_WEB: bool = false;
 
 pub struct WebSimulationPlugin;
 
