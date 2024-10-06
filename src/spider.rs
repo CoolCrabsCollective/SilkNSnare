@@ -110,7 +110,7 @@ impl Plugin for SpiderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_spider);
         app.add_systems(Update, update_spider);
-        app.add_systems(Update, snare_insect);
+        app.add_systems(Update, handle_ensnared_insect_collision);
         app.insert_resource(WebPlane {
             plane: Vec4::new(0.0, 0.0, -1.0, 0.0),
             left: Vec3::new(0.0, 1.0, 0.0),
@@ -170,10 +170,10 @@ fn update_spider(
             * Quat::from_mat3(&base_transform_mat);
 }
 
-fn snare_insect(
+fn handle_ensnared_insect_collision(
     mut commands: Commands,
     mut spider_query: Query<(&mut Spider, Entity)>,
-    insects_query: Query<(&FlyingInsect, &Transform), With<Ensnared>>,
+    mut insects_query: Query<&mut FlyingInsect, With<Ensnared>>,
     mut collision_events: EventReader<CollisionEvent>,
     time: Res<Time>,
     mut ss_snare_timer: ResMut<SnareTimer>,
@@ -196,17 +196,33 @@ fn snare_insect(
                     insects_query.get(*entity_a),
                     insects_query.get(*entity_b),
                 ) {
-                    (true, false, Ok(_), Err(_)) => {
-                        spider.snaring_insect = Some(*entity_b);
+                    (true, false, Ok(insect), Err(_)) => {
+                        if insect.ensnared_and_rolled & insect.cooked {
+                            commands.entity(*entity_a).despawn();
+                        } else {
+                            spider.snaring_insect = Some(*entity_a);
+                        }
                     }
-                    (true, false, Err(_), Ok(_)) => {
-                        spider.snaring_insect = Some(*entity_b);
+                    (true, false, Err(_), Ok(insect)) => {
+                        if insect.ensnared_and_rolled & insect.cooked {
+                            commands.entity(*entity_b).despawn();
+                        } else {
+                            spider.snaring_insect = Some(*entity_b);
+                        }
                     }
-                    (false, true, Ok(_), Err(_)) => {
-                        spider.snaring_insect = Some(*entity_a);
+                    (false, true, Ok(insect), Err(_)) => {
+                        if insect.ensnared_and_rolled & insect.cooked {
+                            commands.entity(*entity_a).despawn();
+                        } else {
+                            spider.snaring_insect = Some(*entity_a);
+                        }
                     }
-                    (false, true, Err(_), Ok(_)) => {
-                        spider.snaring_insect = Some(*entity_a);
+                    (false, true, Err(_), Ok(insect)) => {
+                        if insect.ensnared_and_rolled {
+                            commands.entity(*entity_b).despawn();
+                        } else {
+                            spider.snaring_insect = Some(*entity_b);
+                        }
                     }
                     _ => {
                         // the collision involved other entity types
@@ -263,11 +279,15 @@ fn snare_insect(
             ss_snare_timer.timer.reset();
             ss_snare_timer.timer.pause();
 
-            commands.entity(spider.snaring_insect.unwrap()).despawn();
+            // Mark insect as rolled, wait on timeout before allowing to eat
+            let mut insect  = insects_query.get_mut(spider.snaring_insect.unwrap())
+                .expect("FUCK NO ENSNARED BUG");
+            insect.ensnared_and_rolled = true;
             spider.snaring_insect = None;
         }
     }
 }
+
 fn move_spider(web: &Web, spider: &mut Spider, time: &Res<Time>) {
     if spider.current_position.同(&spider.target_position) {
         return; // spider not moving
