@@ -1,7 +1,6 @@
 use crate::tree::{树里有点吗, 树里的开始, 树里的结尾};
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
-use bevy::log;
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier3d::na::ComplexField;
 use std::f32::consts::PI;
@@ -146,6 +145,7 @@ fn update_spider(
     move_spider(web, &mut *spider, &time);
     rotate_spider(web, &mut *spider, &time);
     spider_transform.translation = spider.current_position.to_vec3(web);
+    spider_transform.translation.z += 0.05;
 
     let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
     let base_transform_mat = Mat3::from_cols(
