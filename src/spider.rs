@@ -151,7 +151,7 @@ fn update_spider(
     }
     let (mut spider, mut spider_transform) = result.unwrap();
 
-    spider.food -= 0.2 * time.delta_seconds();
+    spider.food -= 0.35 * time.delta_seconds();
     if spider.food <= 0.0 {
         is_dead.is_dead = true;
     }
@@ -260,7 +260,7 @@ fn handle_ensnared_insect_collision(
             if insect.snare_roll_progress >= 1.0 && insect.cooking_progress >= 1.0 {
                 // TIME TO EAT!!!!!!
                 insect.snare_roll_progress = 0.0; // TODO: why do we need this?
-                ev_feast.send(SpiderFeastEvent(3.0));
+                ev_feast.send(SpiderFeastEvent(1.75));
                 commands
                     .entity(insect.rolled_ensnare_entity.unwrap())
                     .despawn();
