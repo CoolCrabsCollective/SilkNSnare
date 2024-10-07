@@ -1,4 +1,5 @@
 use super::fruit_fly::{spawn_fruit_fly, DAVID_DEBUG};
+use crate::game::GameState;
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::Web;
 use bevy::app::{App, Plugin, Startup, Update};
@@ -7,8 +8,8 @@ use bevy::color::Color;
 use bevy::math::{Mat3, Vec3};
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::{
-    default, Commands, Component, Entity, Mesh, Meshable, PbrBundle, Quat, Query, Res, ResMut,
-    Resource, Sphere, Time, Timer, TimerMode, Transform, With, Without,
+    default, in_state, Commands, Component, Entity, IntoSystemConfigs, Mesh, Meshable, PbrBundle,
+    Quat, Query, Res, ResMut, Resource, Sphere, Time, Timer, TimerMode, Transform, With, Without,
 };
 use rand::Rng;
 use std::f32::consts::PI;
@@ -30,10 +31,16 @@ pub struct EnsnareRollModel {
 impl Plugin for FlyingInsectPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, generate_ensnare_roll_model);
-        app.add_systems(Update, move_flying_insect);
-        app.add_systems(Update, spawn_fruit_fly);
-        app.add_systems(Update, insect_ensnared_tick_cooking_and_free);
-        app.add_systems(Update, update_ensnare_roll_model);
+        app.add_systems(Update, move_flying_insect.run_if(in_state(GameState::Game)));
+        app.add_systems(Update, spawn_fruit_fly.run_if(in_state(GameState::Game)));
+        app.add_systems(
+            Update,
+            insect_ensnared_tick_cooking_and_free.run_if(in_state(GameState::Game)),
+        );
+        app.add_systems(
+            Update,
+            update_ensnare_roll_model.run_if(in_state(GameState::Game)),
+        );
         app.insert_resource(FruitFlySpawnTimer {
             timer: Timer::new(
                 Duration::from_millis(if DAVID_DEBUG { 3000 } else { 500 }),

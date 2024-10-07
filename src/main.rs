@@ -2,6 +2,7 @@ use crate::flying_insect::flying_insect::FlyingInsectPlugin;
 use crate::game::GamePlugin;
 use crate::mesh_loader::MeshLoaderPlugin;
 use crate::spider::SpiderPlugin;
+use crate::title_screen::TitleScreenPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::prelude::*;
 use bevy::render::render_resource::{AddressMode, FilterMode};
@@ -21,6 +22,7 @@ mod web;
 
 mod flying_insect;
 mod skybox;
+mod title_screen;
 
 fn main() {
     let mut app = App::new();
@@ -58,6 +60,7 @@ fn main() {
         );
     }
 
+    app.add_plugins(TitleScreenPlugin);
     app.add_plugins(GamePlugin);
     app.add_plugins(MeshLoaderPlugin);
     app.add_plugins(TreePlugin);

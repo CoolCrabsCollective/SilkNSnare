@@ -19,8 +19,16 @@ use std::f32::consts::PI;
 
 pub struct GamePlugin;
 
+#[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
+pub enum GameState {
+    #[default]
+    TitleScreen,
+    Game,
+}
+
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
+        app.insert_state(GameState::TitleScreen);
         app.add_systems(Startup, setup.after(mesh_loader::setup));
         app.add_systems(
             Update,
@@ -75,6 +83,17 @@ fn setup(
         transform: Transform::from_xyz(-2.0, 1.0, 3.0),
         point_light: PointLight {
             intensity: 100_000.0,
+            color: light_color,
+            shadows_enabled: true,
+            ..default()
+        },
+        ..default()
+    });
+
+    commands.spawn(PointLightBundle {
+        transform: Transform::from_xyz(-0.5, -0.5, 5.5),
+        point_light: PointLight {
+            intensity: 1_000_000.0,
             color: light_color,
             shadows_enabled: true,
             ..default()
@@ -196,7 +215,7 @@ fn setup(
 }
 
 pub fn get_initial_camera_transform() -> Transform {
-    Transform::from_xyz(0.0, 0.0, 5.0).with_rotation(Quat::from_axis_angle(Vec3::Y, 0.0))
+    Transform::from_xyz(-0.5, 0.3, 4.5).with_rotation(Quat::from_axis_angle(Vec3::Y, 0.0))
 }
 
 fn get_initial_sun_transform() -> Transform {
