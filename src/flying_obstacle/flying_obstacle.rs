@@ -61,7 +61,7 @@ fn move_obstacle(
     mut query: Query<(&mut FlyingObstacle, &mut Transform, Entity)>,
 ) {
     for (mut obstacle, mut transform, entity) in query.iter_mut() {
-        obstacle.motion.time += time.delta_seconds();
+        obstacle.motion.time += time.delta_seconds() * 0.33333;
 
         // parabolic motion
         transform.translation.x = obstacle.motion.start_pos.x + obstacle.motion.velocity.x * obstacle.motion.time;

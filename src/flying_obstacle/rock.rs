@@ -24,7 +24,7 @@ pub fn spawn_rock(
         let y_begin = 1.0;
         let start_pos = Vec3::new(x_begin, y_begin, -2.0);
 
-        let y_begin_vel = rng.gen_range(0.75..3.25);
+        let y_begin_vel = rng.gen_range(0.75..3.0);
         let z_begin_vel = 4.0;
         let vel = Vec3::new(0.0, y_begin_vel, z_begin_vel);
 
@@ -34,7 +34,7 @@ pub fn spawn_rock(
                    start_pos,
                    vel,
                    Vec3::new(0.0, -9.81, 0.0),
-                   Vec3::new(0.0, 1.0, 1.0),
+                   Vec3::new(0.0, 5.0, 5.0),
                    Duration::from_secs(20)
                ),
                Rock,
@@ -43,7 +43,7 @@ pub fn spawn_rock(
                    transform: Transform {
                        translation: start_pos,
                        rotation: Quat::default(),
-                       scale: Vec3::new(0.02, 0.07, 0.07) * 1.5,
+                       scale: Vec3::new(0.07, 0.07, 0.07) * 1.5,
                    },
                    global_transform: Default::default(),
                    visibility: Default::default(),
