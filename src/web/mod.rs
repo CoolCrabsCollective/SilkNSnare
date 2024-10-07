@@ -413,6 +413,8 @@ fn handle_obstacles_destroy_web(
         panic!("FUCK NO WEB");
     };
 
+    let mut call_counter = 0;
+
     let mut handle_spring_break =
         |web: &mut Web, web_segment: &WebSegmentCollision, obstacle_trans: Vec3, entity: Entity| {
             let spring = web.springs.get(web_segment.spring_index).unwrap();
@@ -433,6 +435,9 @@ fn handle_obstacles_destroy_web(
             obstacle_position_t={obstacle_position_t}"
                 );
             }
+
+            call_counter += 1;
+            assert!(call_counter < 10000);
 
             let t = obstacle_position_t.clamp(0.0, 1.0);
 
