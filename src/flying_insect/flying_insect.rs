@@ -2,6 +2,7 @@ use super::fruit_fly::DAVID_DEBUG;
 use crate::flying_insect::fruit_fly::{fly_hentai_anime_setup, spawn_fruit_fly, Animation};
 use crate::game::GameState;
 use crate::mesh_loader::{self, load_level, MeshLoader};
+use crate::spider::Spider;
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::Web;
 use bevy::app::{App, Plugin, Startup, Update};
@@ -216,14 +217,14 @@ fn insect_ensnared_tick_cooking_and_free(
     mut insect_query: Query<(&mut FlyingInsect, Entity), With<Ensnared>>,
     time: Res<Time>,
 ) {
-    for (mut insect, entity) in insect_query.iter_mut() {
+    for (mut insect, insect_entity) in insect_query.iter_mut() {
         if insect.freed_timer.paused() {
             insect.freed_timer.unpause();
         }
 
         insect.freed_timer.tick(time.delta());
         if insect.freed_timer.just_finished() && insect.snare_roll_progress < 1.0 {
-            free_enemy_from_web(&mut commands, entity, &mut *web_query.single_mut());
+            free_enemy_from_web(&mut commands, insect_entity, &mut *web_query.single_mut());
             if insect.rolled_ensnare_entity != None {
                 commands
                     .entity(insect.rolled_ensnare_entity.unwrap())
@@ -287,16 +288,14 @@ fn update_ensnare_roll_model(
                 //     insect_trans.scale
                 // );
                 materials.add(ensnare_roll_model.material.clone());
-                let entity = commands.spawn(
-                    (PbrBundle {
-                        mesh: ensnare_roll_model.mesh.clone(),
-                        material: materials.add(ensnare_roll_model.material.clone()),
-                        transform: insect_trans.with_scale(
-                            1.5 * insect_trans.scale.x * ensnare_roll_model.transform.scale,
-                        ),
-                        ..default()
-                    }),
-                );
+                let entity = commands.spawn(PbrBundle {
+                    mesh: ensnare_roll_model.mesh.clone(),
+                    material: materials.add(ensnare_roll_model.material.clone()),
+                    transform: insect_trans.with_scale(
+                        1.5 * insect_trans.scale.x * ensnare_roll_model.transform.scale,
+                    ),
+                    ..default()
+                });
 
                 insect.rolled_ensnare_entity = Some(entity.id());
                 return;

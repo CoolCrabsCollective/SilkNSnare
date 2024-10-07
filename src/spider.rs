@@ -43,7 +43,7 @@ pub struct Spider {
     pub current_position: SpiderPosition,
     pub current_rotation: f32,
     pub target_position: SpiderPosition,
-    pub snaring_insects: Vec<Entity>,
+    pub touching_insects: Vec<Entity>,
 }
 
 #[derive(Copy, Clone)]
@@ -111,7 +111,7 @@ impl Spider {
             target_position: SpiderPosition::TREE(pos),
             current_position: SpiderPosition::TREE(pos),
             current_rotation: 0.0,
-            snaring_insects: vec![],
+            touching_insects: vec![],
         }
     }
 }
@@ -233,7 +233,7 @@ fn handle_ensnared_insect_collision(
     mut commands: Commands,
     mut web_query: Query<&mut Web>,
     mut spider_query: Query<(&mut Spider, Entity)>,
-    mut insects_query: Query<(&mut FlyingInsect), With<Ensnared>>,
+    mut insects_query: Query<&mut FlyingInsect>,
     mut collision_events: EventReader<CollisionEvent>,
     mut ev_feast: EventWriter<SpiderFeastEvent>,
     time: Res<Time>,
@@ -247,34 +247,52 @@ fn handle_ensnared_insect_collision(
 
     let (mut spider, s_entity) = result.unwrap();
 
-    let mut roll_or_eat_insect =
-        |mut commands: &mut Commands,
-         mut insects_query: &mut Query<(&mut FlyingInsect), With<Ensnared>>,
-         insect_entity: Entity,
-         mut web_query: &mut Query<&mut Web>,
-         mut s: &mut Spider| {
-            let Ok(mut insect) = insects_query.get_mut(insect_entity) else {
-                error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
-                return;
-            };
-            if insect.snare_roll_progress >= 1.0 && insect.cooking_progress >= 1.0 {
-                // TIME TO EAT!!!!!!
-                insect.snare_roll_progress = 0.0; // TODO: why do we need this?
-                ev_feast.send(SpiderFeastEvent(3.0));
-                commands
-                    .entity(insect.rolled_ensnare_entity.unwrap())
-                    .despawn();
-
-                free_enemy_from_web(commands, insect_entity, &mut *web_query.single_mut());
-                commands.entity(insect_entity).despawn();
-            } else if insect.snare_roll_progress == 0.0 {
-                if !s.snaring_insects.contains(&insect_entity) {
-                    log::warn!("start snaring fly {:?}", insect_entity);
-                    s.snaring_insects.push(insect_entity); // only start rolling
-                    insect.freed_timer.pause();
-                }
-            }
+    let mut on_touch_insect = |mut commands: &mut Commands,
+                               mut insects_query: &mut Query<&mut FlyingInsect>,
+                               insect_entity: Entity,
+                               mut web_query: &mut Query<&mut Web>,
+                               mut s: &mut Spider| {
+        let Ok(mut insect) = insects_query.get_mut(insect_entity) else {
+            error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
+            return;
         };
+
+        if !s.touching_insects.contains(&insect_entity) {
+            log::warn!("start snaring fly {:?}", insect_entity);
+            s.touching_insects.push(insect_entity);
+            insect.freed_timer.pause();
+        }
+    };
+
+    let mut on_leave_insect = |mut commands: &mut Commands,
+                               mut insects_query: &mut Query<&mut FlyingInsect>,
+                               insect_entity: Entity,
+                               mut web_query: &mut Query<&mut Web>,
+                               mut s: &mut Spider| {
+        let Ok(mut insect) = insects_query.get_mut(insect_entity) else {
+            error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
+            return;
+        };
+
+        if let Some(index) = s
+            .touching_insects
+            .iter()
+            .copied()
+            .position(|item| item == insect_entity)
+        {
+            s.touching_insects.swap_remove(index);
+
+            log::warn!("stop snaring fly {:?}", insect_entity);
+
+            insect.snare_timer.pause();
+            if insect.snare_roll_progress < 0.99 {
+                insect.snare_roll_progress = 0.0;
+                insect.snare_timer.reset();
+            }
+
+            insect.freed_timer.unpause();
+        };
+    };
 
     let collision_events: Vec<CollisionEvent> = collision_events.read().cloned().collect();
 
@@ -286,18 +304,8 @@ fn handle_ensnared_insect_collision(
                 insects_query.get(*entity_a),
                 insects_query.get(*entity_b),
             ) {
-                // TODO: this case is probably useless
-                (true, false, Ok(_), Err(_)) => {
-                    roll_or_eat_insect(
-                        &mut commands,
-                        &mut insects_query,
-                        *entity_a,
-                        &mut web_query,
-                        spider.as_mut(),
-                    );
-                }
                 (true, false, Err(_), Ok(_)) => {
-                    roll_or_eat_insect(
+                    on_touch_insect(
                         &mut commands,
                         &mut insects_query,
                         *entity_b,
@@ -306,7 +314,7 @@ fn handle_ensnared_insect_collision(
                     );
                 }
                 (false, true, Ok(_), Err(_)) => {
-                    roll_or_eat_insect(
+                    on_touch_insect(
                         &mut commands,
                         &mut insects_query,
                         *entity_a,
@@ -314,12 +322,32 @@ fn handle_ensnared_insect_collision(
                         spider.as_mut(),
                     );
                 }
-                // TODO: this case is probably useless
-                (false, true, Err(_), Ok(_)) => {
-                    roll_or_eat_insect(
+                _ => {
+                    // the collision involved other entity types
+                }
+            }
+        }
+        if let CollisionEvent::Stopped(entity_a, entity_b, _) = collision_event {
+            match (
+                s_entity == *entity_a,
+                s_entity == *entity_b,
+                insects_query.get(*entity_a),
+                insects_query.get(*entity_b),
+            ) {
+                (true, false, Err(_), Ok(_)) => {
+                    on_leave_insect(
                         &mut commands,
                         &mut insects_query,
                         *entity_b,
+                        &mut web_query,
+                        spider.as_mut(),
+                    );
+                }
+                (false, true, Ok(_), Err(_)) => {
+                    on_leave_insect(
+                        &mut commands,
+                        &mut insects_query,
+                        *entity_a,
                         &mut web_query,
                         spider.as_mut(),
                     );
@@ -331,64 +359,49 @@ fn handle_ensnared_insect_collision(
         }
     }
 
-    let mut snaring_insects_to_remove: Vec<usize> = vec![];
+    let mut to_remove = vec![];
 
-    for (snaring_insects_index, snaring_insect_entity) in spider.snaring_insects.iter().enumerate()
-    {
+    for touching_insect_entity in &spider.touching_insects {
+        if let Err(_) = insects_query.get_mut(*touching_insect_entity) {
+            to_remove.push(*touching_insect_entity);
+        }
+    }
+
+    for entity in to_remove {
+        let index_of = spider
+            .touching_insects
+            .iter()
+            .copied()
+            .position(|item| item == entity);
+        if let Some(index) = index_of {
+            spider.touching_insects.swap_remove(index);
+        }
+    }
+
+    for snaring_insect_entity in spider.touching_insects.iter() {
         let Ok(mut insect) = insects_query.get_mut(*snaring_insect_entity) else {
             error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
             continue;
         };
 
-        let mut no_longer_touching_insect = false;
-        for collision_event in &collision_events {
-            if let CollisionEvent::Stopped(entity_a, entity_b, _) = collision_event {
-                match (
-                    s_entity == *entity_a,
-                    s_entity == *entity_b,
-                    *snaring_insect_entity == *entity_a,
-                    *snaring_insect_entity == *entity_b,
-                ) {
-                    (true, false, true, false) => {
-                        no_longer_touching_insect = true;
-                    }
-                    (true, false, false, true) => {
-                        no_longer_touching_insect = true;
-                    }
-                    (false, true, true, false) => {
-                        no_longer_touching_insect = true;
-                    }
-                    (false, true, false, true) => {
-                        no_longer_touching_insect = true;
-                    }
-                    _ => {
-                        // the collision involved other entity types
-                    }
-                }
+        if insect.cooking_progress >= 1.0 {
+            // TIME TO EAT!!!!!!
+            insect.snare_roll_progress = 0.0; // TODO: why do we need this?
+            ev_feast.send(SpiderFeastEvent(3.0));
+            commands
+                .entity(insect.rolled_ensnare_entity.unwrap())
+                .despawn();
 
-                if no_longer_touching_insect {
-                    break;
-                }
-            }
+            free_enemy_from_web(
+                &mut commands,
+                *snaring_insect_entity,
+                &mut *web_query.single_mut(),
+            );
+            commands.entity(*snaring_insect_entity).despawn();
+            continue;
         }
 
-        if no_longer_touching_insect {
-            log::warn!("stop snaring fly {:?}", snaring_insect_entity);
-
-            insect.snare_timer.pause();
-            if insect.snare_roll_progress < 0.99 {
-                insect.snare_roll_progress = 0.0;
-                insect.snare_timer.reset();
-            }
-
-            if insect.cooking_progress < 0.99 {
-                insect.cooking_progress = 0.0;
-                insect.cooking_timer.reset();
-            }
-
-            insect.freed_timer.unpause();
-
-            snaring_insects_to_remove.push(snaring_insects_index);
+        if insect.snare_roll_progress >= 1.0 {
             continue;
         }
 
@@ -413,15 +426,7 @@ fn handle_ensnared_insect_collision(
                     }
                 }
             }
-
-            snaring_insects_to_remove.push(snaring_insects_index);
-        } else if let Err(_) = insects_query.get_mut(*snaring_insect_entity) {
-            snaring_insects_to_remove.push(snaring_insects_index);
         }
-    }
-
-    for i in snaring_insects_to_remove {
-        spider.snaring_insects.swap_remove(i);
     }
 }
 
