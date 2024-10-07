@@ -212,7 +212,8 @@ fn asset_loaded(
     mut skyboxes: Query<&mut Skybox>,
 ) {
     if !cubemap.is_loaded && asset_server.load_state(&cubemap.image_handle) == LoadState::Loaded {
-        info!("Swapping to {}...", CUBEMAPS[cubemap.index].0);
+        // SHUT THE FUCK UP
+        //info!("Swapping to {}...", CUBEMAPS[cubemap.index].0);
         let image = images.get_mut(&cubemap.image_handle).unwrap();
         // NOTE: PNGs do not have any metadata that could indicate they contain a cubemap texture,
         // so they appear as one texture. The following code reconfigures the texture as necessary.
