@@ -1,10 +1,11 @@
+use crate::health::HealthBar;
 use crate::mesh_loader::{self, load_level, MeshLoader};
 use crate::skybox::{Cubemap, CUBEMAPS};
 use crate::web::WebSimulationPlugin;
 use bevy::asset::LoadState;
 use bevy::audio::PlaybackMode::Loop;
 use bevy::audio::Volume;
-use bevy::color::palettes::basic::RED;
+use bevy::color::palettes::basic::{BLACK, LIME, RED};
 use bevy::color::palettes::css::ORANGE_RED;
 use bevy::core_pipeline::Skybox;
 use bevy::math::VectorSpace;
@@ -19,8 +20,16 @@ use std::f32::consts::PI;
 
 pub struct GamePlugin;
 
+#[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
+pub enum GameState {
+    #[default]
+    TitleScreen,
+    Game,
+}
+
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
+        app.insert_state(GameState::TitleScreen);
         app.add_systems(Startup, setup.after(mesh_loader::setup));
         app.add_systems(
             Update,
@@ -75,6 +84,17 @@ fn setup(
         transform: Transform::from_xyz(-2.0, 1.0, 3.0),
         point_light: PointLight {
             intensity: 100_000.0,
+            color: light_color,
+            shadows_enabled: true,
+            ..default()
+        },
+        ..default()
+    });
+
+    commands.spawn(PointLightBundle {
+        transform: Transform::from_xyz(-0.5, -0.5, 5.5),
+        point_light: PointLight {
+            intensity: 1_000_000.0,
             color: light_color,
             shadows_enabled: true,
             ..default()
@@ -163,6 +183,50 @@ fn setup(
         },
     ));
 
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::SpaceBetween,
+                ..default()
+            },
+            ..default()
+        })
+        .with_children(|parent| {
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        width: Val::Px(200.0),
+                        height: Val::Px(20.0),
+                        position_type: PositionType::Absolute,
+                        right: Val::Px(20.),
+                        bottom: Val::Px(20.),
+                        border: UiRect::all(Val::Px(2.)),
+                        ..default()
+                    },
+                    border_color: BLACK.into(),
+                    background_color: Color::srgb(0.4, 0.4, 0.4).into(),
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent.spawn((
+                        HealthBar,
+                        NodeBundle {
+                            style: Style {
+                                width: Val::Percent(100.0),
+                                height: Val::Percent(100.0),
+                                position_type: PositionType::Relative,
+                                left: Val::Px(0.0),
+                                ..default()
+                            },
+                            background_color: Color::srgb(0.6, 0.6, 1.).into(),
+                            ..default()
+                        },
+                    ));
+                });
+        });
+
     commands.insert_resource(Cubemap {
         is_loaded: false,
         index: 0,
@@ -196,7 +260,7 @@ fn setup(
 }
 
 pub fn get_initial_camera_transform() -> Transform {
-    Transform::from_xyz(0.0, 0.0, 5.0).with_rotation(Quat::from_axis_angle(Vec3::Y, 0.0))
+    Transform::from_xyz(-0.5, 0.3, 4.5).with_rotation(Quat::from_axis_angle(Vec3::Y, 0.0))
 }
 
 fn get_initial_sun_transform() -> Transform {

@@ -1,5 +1,6 @@
 use super::fruit_fly::DAVID_DEBUG;
 use crate::flying_insect::fruit_fly::{fly_hentai_anime_setup, spawn_fruit_fly, Animation};
+use crate::game::GameState;
 use crate::mesh_loader::{self, load_level, MeshLoader};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::Web;
@@ -30,11 +31,20 @@ pub struct EnsnareRollModel {
 impl Plugin for FlyingInsectPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, load_ensnare_roll_model.after(mesh_loader::setup));
-        app.add_systems(Update, move_flying_insect);
-        app.add_systems(Update, spawn_fruit_fly);
-        app.add_systems(Update, insect_ensnared_tick_cooking_and_free);
-        app.add_systems(Update, update_ensnare_roll_model);
-        app.add_systems(Update, fly_hentai_anime_setup);
+        app.add_systems(Update, move_flying_insect.run_if(in_state(GameState::Game)));
+        app.add_systems(Update, spawn_fruit_fly.run_if(in_state(GameState::Game)));
+        app.add_systems(
+            Update,
+            insect_ensnared_tick_cooking_and_free.run_if(in_state(GameState::Game)),
+        );
+        app.add_systems(
+            Update,
+            update_ensnare_roll_model.run_if(in_state(GameState::Game)),
+        );
+        app.add_systems(
+            Update,
+            fly_hentai_anime_setup.run_if(in_state(GameState::Game)),
+        );
         app.insert_resource(FruitFlySpawnTimer {
             timer: Timer::new(
                 Duration::from_millis(if DAVID_DEBUG { 3000 } else { 500 }),
