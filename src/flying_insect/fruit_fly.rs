@@ -89,7 +89,7 @@ pub fn spawn_fruit_fly(
                 },
                 Collider::capsule_y(1.0, 1.0),
                 BarSettings::<CookingInsect> {
-                    offset: 1.0,
+                    offset: 2.0,
                     width: 3.0,
                     height: BarHeight::Static(0.5),
                     ..default()

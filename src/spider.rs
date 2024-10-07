@@ -3,6 +3,7 @@ use crate::flying_insect::flying_insect::{BezierCurve, FlyingInsect};
 use crate::game::GameState;
 use crate::health::IsDead;
 use crate::tree::{树里有小路吗, 树里有点吗};
+use crate::ui::progress_bar::CookingInsect;
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
@@ -397,7 +398,14 @@ fn handle_ensnared_insect_collision(
                 *snaring_insect_entity,
                 &mut *web_query.single_mut(),
             );
-            commands.entity(*snaring_insect_entity).despawn();
+            commands
+                .entity(*snaring_insect_entity)
+                .remove::<BarSettings<CookingInsect>>();
+            commands
+                .entity(*snaring_insect_entity)
+                .remove::<CookingInsect>();
+            commands.entity(*snaring_insect_entity).despawn_recursive();
+            println!("DESPAWN!!!!!!");
             continue;
         }
 
@@ -416,6 +424,9 @@ fn handle_ensnared_insect_collision(
         if insect.snare_timer.just_finished() {
             insect.snare_timer.reset();
             insect.snare_timer.pause();
+            commands
+                .entity(*snaring_insect_entity)
+                .insert(CookingInsect { progress: 0.0 });
 
             let mut web = web_query.single_mut();
             for spring in &mut web.springs {
@@ -731,10 +742,10 @@ fn set_new_target(
             hack_swap_removed_a_spring = true;
         } else {
             let in_tree = 树里有点吗(position, rapier_context, cam, cam_transform);
-            if !in_tree {
-                println!("[FUCK] Trying to create new spring start point but NOT IN TREE");
-                return;
-            }
+            //if !in_tree {
+            //    println!("[FUCK] Trying to create new spring start point but NOT IN TREE");
+            //    return;
+            //}
 
             web.particles.push(Particle {
                 position: position,
@@ -743,7 +754,7 @@ fn set_new_target(
                 impulse: Default::default(),
                 impulse_duration: 0.0,
                 mass: 0.0,
-                pinned: true,
+                pinned: in_tree,
             });
         }
         web.particles.len() - 1
