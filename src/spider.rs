@@ -2,7 +2,7 @@ use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_PLAYER, COLLISION_GROUP
 use crate::flying_insect::flying_insect::{BezierCurve, FlyingInsect};
 use crate::game::GameState;
 use crate::health::IsDead;
-use crate::tree::{树里有小路吗, 树里有点吗};
+use crate::tree::{树里有小路吗, 树里有点吗, 照相机里有点吗};
 use crate::ui::progress_bar::CookingInsect;
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::spring::Spring;
@@ -219,6 +219,11 @@ fn update_spider(
                 web.破壊する(p, &insect_query, &mut commands);
             }
         }
+    }
+
+    if !照相机里有点吗(spider_transform.translation) {
+        spider.current_position = SpiderPosition::TREE(Vec3::new(-2.0, -0.3, 0.0));
+        spider.target_position = SpiderPosition::TREE(Vec3::new(-2.0, -0.3, 0.0));
     }
 
     move_spider(web, &mut *spider, &time);

@@ -94,8 +94,8 @@ impl Web {
                 position: あるバネのポイント,
                 velocity: Default::default(),
                 force: Default::default(),
-                impulse: Default::default(),
-                impulse_duration: 0.0,
+                impulse: Vec3::new(0.0, 0.0, 1.0) * 10000.0,
+                impulse_duration: 0.1,
                 mass: 0.0,
                 pinned: false,
             });
@@ -104,8 +104,8 @@ impl Web {
                 position: あるバネのポイント,
                 velocity: Default::default(),
                 force: Default::default(),
-                impulse: Default::default(),
-                impulse_duration: 0.0,
+                impulse: Vec3::new(0.0, 0.0, 1.0) * 10000.0,
+                impulse_duration: 0.1,
                 mass: 0.0,
                 pinned: false,
             });
