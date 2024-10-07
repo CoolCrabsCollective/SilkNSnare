@@ -46,7 +46,7 @@ fn setup(
     //load_level("map.glb#Scene0", &mut commands, &asset_server);
 
     commands.spawn(AudioBundle {
-        source: asset_server.load("web_pressure.ogg"),
+        source: asset_server.load("web_pressure_v2.ogg"),
         settings: PlaybackSettings {
             mode: Loop,
             volume: Volume::new(1.0f32),
