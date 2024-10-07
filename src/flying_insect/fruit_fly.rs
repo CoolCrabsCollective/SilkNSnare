@@ -8,11 +8,19 @@ pub const DAVID_DEBUG: bool = false;
 #[derive(Component)]
 struct FruitFly;
 
+#[derive(Resource)]
+pub struct Animation {
+    pub animation_list: Vec<AnimationNodeIndex>,
+    pub graph: Handle<AnimationGraph>,
+}
+
 pub fn spawn_fruit_fly(
     mut commands: Commands,
     asset_server: ResMut<AssetServer>,
     time: Res<Time>,
     mut ff_spawn_timer: ResMut<FruitFlySpawnTimer>,
+    mut graphs: ResMut<Assets<AnimationGraph>>,
+    mut animation_res: ResMut<Animation>
 ) {
     ff_spawn_timer.timer.tick(time.delta());
     if ff_spawn_timer.timer.just_finished() {
@@ -26,6 +34,24 @@ pub fn spawn_fruit_fly(
         let end_pos = Vec3::new(x_end, y_end, 3.5);
 
         let david_debug_pos = Vec2::new(-2.0, 0.1);
+
+        let mut graph = AnimationGraph::new();
+        let animations: Vec<_> = graph
+            .add_clips(
+                [
+                    GltfAssetLabel::Animation(0).from_asset("fruit_fly.glb"),
+                    GltfAssetLabel::Animation(1).from_asset("fruit_fly.glb"),
+                ]
+                    .into_iter()
+                    .map(|path| asset_server.load(path)),
+                1.0,
+                graph.root,
+            )
+            .collect();
+
+        let graph = graphs.add(graph);
+        animation_res.animation_list = animations;
+        animation_res.graph = graph;
 
         commands
             .spawn((
@@ -60,5 +86,20 @@ pub fn spawn_fruit_fly(
             ))
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC);
+    }
+}
+
+pub fn fly_hentai_anime_setup(
+    mut commands: Commands,
+    animations: Res<Animation>,
+    mut player_query: Query<(Entity, &mut AnimationPlayer), Added<AnimationPlayer>>,
+) {
+    for (entity, mut player) in player_query.iter_mut() {
+        player.play(animations.animation_list[0]).repeat();
+        player.play(animations.animation_list[1]).repeat();
+
+        commands.entity(entity)
+            .insert(animations.graph.clone())
+            .insert(player.clone());
     }
 }

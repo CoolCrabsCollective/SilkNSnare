@@ -1,14 +1,15 @@
-use crate::flying_insect::fruit_fly::spawn_fruit_fly;
+use crate::flying_insect::fruit_fly::{fly_hentai_anime_setup, spawn_fruit_fly, Animation};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::ensnare::EnsnaredEntity;
 use crate::web::Web;
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::log::error;
 use bevy::math::{Mat3, Vec3};
-use bevy::prelude::{default, Commands, Component, Entity, Mesh, Meshable, ParamSet, PbrBundle, Quat, Query, Res, ResMut, Resource, Sphere, Time, Timer, TimerMode, Transform, With, Without};
+use bevy::prelude::{default, Commands, Component, Entity, IntoSystemConfigs, Mesh, Meshable, ParamSet, PbrBundle, Quat, Query, Res, ResMut, Resource, Sphere, Time, Timer, TimerMode, Transform, With, Without};
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
+use bevy::animation::animate_targets;
 use bevy::asset::{Assets, Handle};
 use bevy::color::Color;
 use bevy::pbr::StandardMaterial;
@@ -34,6 +35,7 @@ impl Plugin for FlyingInsectPlugin {
         app.add_systems(Update, spawn_fruit_fly);
         app.add_systems(Update, insect_ensnared_tick_cooking_and_free);
         app.add_systems(Update, update_ensnare_roll_model);
+        app.add_systems(Update, fly_hentai_anime_setup);
         app.insert_resource(FruitFlySpawnTimer {
             timer: Timer::new(
                 Duration::from_millis(if DAVID_DEBUG { 3000 } else { 500 }),
@@ -43,6 +45,10 @@ impl Plugin for FlyingInsectPlugin {
         app.insert_resource(EnsnareRollModel {
             mesh: Default::default(),
             material: Default::default(),
+        });
+        app.insert_resource(Animation {
+            animation_list: vec![],
+            graph: Default::default(),
         });
     }
 }
