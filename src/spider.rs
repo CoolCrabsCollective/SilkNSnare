@@ -196,13 +196,20 @@ fn handle_ensnared_insect_collision(
     let (mut spider, s_entity) = result.unwrap();
 
     let mut roll_or_eat_insect =
-    |mut commands: &mut Commands, insect: &FlyingInsect, entity: Entity,
-     mut web_query: &mut Query<&mut Web>, mut s: &mut Spider| {
+    |mut commands: &mut Commands, mut insects_query: &mut Query<(&mut FlyingInsect), With<Ensnared>>,
+     entity: Entity, mut web_query: &mut Query<&mut Web>, mut s: &mut Spider| {
+        let Ok(mut insect) = insects_query.get_mut(entity) else {
+            error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
+            return;
+        };
         if insect.ensnared_and_rolled & insect.cooked { // TIME TO EAT!!!!!!
+            insect.ensnared_and_rolled = false;
+            commands.entity(insect.rolled_ensnare_entity.unwrap()).despawn();
             free_enemy_from_web(commands, entity, web_query);
             commands.entity(entity).despawn();
         } else {
-            s.snaring_insect = Some(entity);
+            s.snaring_insect = Some(entity); // only start rolling
+            insect.freed_timer.pause();
         }
     };
 
@@ -215,17 +222,17 @@ fn handle_ensnared_insect_collision(
                     insects_query.get(*entity_a),
                     insects_query.get(*entity_b),
                 ) {
-                    (true, false, Ok(insect), Err(_)) => {
-                        roll_or_eat_insect(&mut commands, insect, *entity_a, &mut web_query, spider.as_mut());
+                    (true, false, Ok(mut insect), Err(_)) => {
+                        roll_or_eat_insect(&mut commands, &mut insects_query, *entity_a, &mut web_query, spider.as_mut());
                     }
                     (true, false, Err(_), Ok(insect)) => {
-                        roll_or_eat_insect(&mut commands, insect, *entity_b, &mut web_query, spider.as_mut());
+                        roll_or_eat_insect(&mut commands, &mut insects_query, *entity_b, &mut web_query, spider.as_mut());
                     }
                     (false, true, Ok(insect), Err(_)) => {
-                        roll_or_eat_insect(&mut commands, insect, *entity_a, &mut web_query, spider.as_mut());
+                        roll_or_eat_insect(&mut commands, &mut insects_query, *entity_a, &mut web_query, spider.as_mut());
                     }
                     (false, true, Err(_), Ok(insect)) => {
-                        roll_or_eat_insect(&mut commands, insect, *entity_b, &mut web_query, spider.as_mut());
+                        roll_or_eat_insect(&mut commands, &mut insects_query, *entity_b, &mut web_query, spider.as_mut());
                     }
                     _ => {
                         // the collision involved other entity types
@@ -267,6 +274,11 @@ fn handle_ensnared_insect_collision(
         }
 
         if !still_snaring {
+            let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) else {
+                error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
+                return;
+            };
+            insect.freed_timer.unpause();
             spider.snaring_insect = None;
             ss_snare_timer.timer.reset();
             ss_snare_timer.timer.pause();
