@@ -5,6 +5,7 @@ use crate::health::HealthPlugin;
 use crate::mesh_loader::MeshLoaderPlugin;
 use crate::spider::SpiderPlugin;
 use crate::title_screen::TitleScreenPlugin;
+use crate::ui::progress_bar::ProgressBarPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::prelude::*;
 use bevy::render::render_resource::{AddressMode, FilterMode};
@@ -74,6 +75,7 @@ fn main() {
     app.add_plugins(FlyingInsectPlugin);
     app.add_plugins(HealthPlugin);
     app.add_plugins(FlyingObstaclePlugin);
+    app.add_plugins(ProgressBarPlugin);
 
     app.run();
 }

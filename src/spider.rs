@@ -1,5 +1,5 @@
 use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN};
-use crate::flying_insect::flying_insect::FlyingInsect;
+use crate::flying_insect::flying_insect::{BezierCurve, FlyingInsect};
 use crate::game::GameState;
 use crate::tree::{树里有小路吗, 树里有点吗};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
@@ -9,6 +9,8 @@ use bevy::ecs::observer::TriggerTargets;
 use bevy::ecs::query::QueryEntityError;
 use bevy::input::touch::TouchPhase;
 use bevy::{prelude::*, window::PrimaryWindow};
+use bevy_health_bar3d::configuration::BarSettings;
+use bevy_health_bar3d::prelude::BarHeight;
 use bevy_rapier3d::na::ComplexField;
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_rapier3d::plugin::RapierContext;
