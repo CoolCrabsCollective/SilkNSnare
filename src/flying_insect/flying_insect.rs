@@ -1,4 +1,4 @@
-use super::fruit_fly::{spawn_fruit_fly, DAVID_DEBUG};
+use crate::flying_insect::fruit_fly::{fly_hentai_anime_setup, spawn_fruit_fly, Animation};
 use crate::game::GameState;
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::Web;
@@ -14,6 +14,7 @@ use bevy::prelude::{
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
+use super::fruit_fly::DAVID_DEBUG;
 
 pub struct FlyingInsectPlugin;
 
@@ -25,7 +26,7 @@ pub struct FruitFlySpawnTimer {
 #[derive(Resource)]
 pub struct EnsnareRollModel {
     pub mesh: Handle<Mesh>,
-    pub material: Handle<StandardMaterial>,
+    pub material: Handle<StandardMaterial>
 }
 
 impl Plugin for FlyingInsectPlugin {
@@ -41,6 +42,7 @@ impl Plugin for FlyingInsectPlugin {
             Update,
             update_ensnare_roll_model.run_if(in_state(GameState::Game)),
         );
+        app.add_systems(Update, fly_hentai_anime_setup.run_if(in_state(GameState::Game)));
         app.insert_resource(FruitFlySpawnTimer {
             timer: Timer::new(
                 Duration::from_millis(if DAVID_DEBUG { 3000 } else { 500 }),
@@ -50,6 +52,10 @@ impl Plugin for FlyingInsectPlugin {
         app.insert_resource(EnsnareRollModel {
             mesh: Default::default(),
             material: Default::default(),
+        });
+        app.insert_resource(Animation {
+            animation_list: vec![],
+            graph: Default::default(),
         });
     }
 }
