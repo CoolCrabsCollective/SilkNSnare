@@ -29,11 +29,6 @@ struct WebPlane {
     left: Vec3,
 }
 
-#[derive(Resource)]
-pub struct SnareTimer {
-    pub timer: Timer,
-}
-
 #[derive(Component)]
 pub struct Spider {
     pub food: f64,
@@ -125,9 +120,6 @@ impl Plugin for SpiderPlugin {
         app.insert_resource(WebPlane {
             plane: Vec4::new(0.0, 0.0, -1.0, 0.0),
             left: Vec3::new(0.0, 1.0, 0.0),
-        });
-        app.insert_resource(SnareTimer {
-            timer: Timer::new(Duration::from_millis(2000), TimerMode::Repeating),
         });
     }
 }
@@ -233,7 +225,6 @@ fn handle_ensnared_insect_collision(
     mut insects_query: Query<(&mut FlyingInsect), With<Ensnared>>,
     mut collision_events: EventReader<CollisionEvent>,
     time: Res<Time>,
-    mut ss_snare_timer: ResMut<SnareTimer>,
 ) {
     let result = spider_query.get_single_mut();
 
@@ -254,16 +245,16 @@ fn handle_ensnared_insect_collision(
                 error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
                 return;
             };
-            if insect.ensnare_roll_progress >= 1.0 && insect.cooking_progress >= 1.0 {
+            if insect.snare_roll_progress >= 1.0 && insect.cooking_progress >= 1.0 {
                 // TIME TO EAT!!!!!!
-                insect.ensnare_roll_progress = 0.0; // TODO: why do we need this?
+                insect.snare_roll_progress = 0.0; // TODO: why do we need this?
                 commands
                     .entity(insect.rolled_ensnare_entity.unwrap())
                     .despawn();
 
                 free_enemy_from_web(commands, entity, &mut *web_query.single_mut());
                 commands.entity(entity).despawn();
-            } else if insect.ensnare_roll_progress == 0.0 {
+            } else if insect.snare_roll_progress == 0.0 {
                 s.snaring_insect = Some(entity); // only start rolling
                 insect.freed_timer.pause();
             }
@@ -353,36 +344,38 @@ fn handle_ensnared_insect_collision(
             }
         }
 
+        let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) else {
+            error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
+            return;
+        };
+
         if !still_snaring {
-            let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) else {
-                error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
-                return;
-            };
+            if insect.snare_roll_progress < 0.99 {
+                insect.snare_roll_progress = 0.0;
+            }
+            if insect.cooking_progress < 0.99 {
+                insect.cooking_progress = 0.0;
+                insect.cooking_timer.reset();
+            }
             insect.freed_timer.unpause();
+            insect.snare_timer.reset();
+            insect.snare_timer.pause();
             spider.snaring_insect = None;
-            ss_snare_timer.timer.reset();
-            ss_snare_timer.timer.pause();
             return;
         }
 
-        if ss_snare_timer.timer.paused() {
-            ss_snare_timer.timer.unpause()
+        if insect.snare_timer.paused() {
+            insect.snare_timer.unpause()
         }
-        ss_snare_timer.timer.tick(time.delta());
+        insect.snare_timer.tick(time.delta());
 
-        if let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) {
-            insect.ensnare_roll_progress +=
-                time.delta_seconds() / ss_snare_timer.timer.duration().as_secs_f32();
-        }
+        insect.snare_roll_progress +=
+            time.delta_seconds() / insect.snare_timer.duration().as_secs_f32();
 
-        if ss_snare_timer.timer.just_finished() {
-            ss_snare_timer.timer.reset();
-            ss_snare_timer.timer.pause();
-
-            // Mark insect as rolled, wait on timeout before allowing to eat
-            if let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) {
-                spider.snaring_insect = None;
-            };
+        if insect.snare_timer.just_finished() {
+            insect.snare_timer.reset();
+            insect.snare_timer.pause();
+            spider.snaring_insect = None;
         }
         if spider.snaring_insect != None {
             match insects_query.get_mut(spider.snaring_insect.unwrap()) {
