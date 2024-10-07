@@ -4,7 +4,7 @@ pub mod spring;
 
 use crate::flying_insect::flying_insect::FlyingInsect;
 use crate::flying_obstacle::flying_obstacle::FlyingObstacle;
-use crate::tree::get_arena_center;
+use crate::tree::{get_arena_center, 照相机里有点吗};
 use crate::web::ensnare::{free_enemy_from_web, split_ensnared_entities_for_spring_split};
 use crate::web::render::WebSegmentCollision;
 use crate::web::spring::Spring;
@@ -16,6 +16,8 @@ use render::{clear_web, render_web};
 use std::f32::consts::PI;
 
 pub const START_WITH_A_WEB: bool = false; // FOR NOOBS
+pub static mut splitting_spring: i32 = 0;
+pub static mut destroy_call: i32 = 0;
 
 pub struct WebSimulationPlugin;
 
@@ -46,6 +48,15 @@ impl Web {
         insect_query: &Query<&FlyingInsect>,
         commands: &mut Commands,
     ) {
+        if !照相机里有点吗(ポイント) {
+            return;
+        }
+
+        unsafe {
+            println!("Calling destroy: {}", destroy_call);
+            destroy_call += 1;
+        }
+
         let カウント = self.springs.len();
         for インデックス in 0..カウント {
             let 粒子1 = self.particles[self.springs[インデックス].first_index].position;
@@ -54,10 +65,17 @@ impl Web {
             let 差1 = (ポイント - 粒子1).normalize();
             let 差2 = (ポイント - 粒子2).normalize();
 
-            if 差1.dot(差2) > -0.98 {
+            if 差1.dot(差2) > -0.98 || 差1.is_nan() || 差2.is_nan() {
                 continue;
             }
 
+            unsafe {
+                println!(
+                    "Splitting spring: {}, 差1: {}, 差2: {}",
+                    splitting_spring, 差1, 差2
+                );
+                splitting_spring += 1;
+            }
             let あるバネのパラメーター = (ポイント - 粒子1).length() / (粒子2 - 粒子1).length();
             while self.springs[インデックス].ensnared_entities.len() > 0 {
                 let 罠にかかった = &self.springs[インデックス].ensnared_entities[0];
