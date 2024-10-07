@@ -187,7 +187,7 @@ pub fn get_target_camera_position() -> Vec3 {
 }
 
 pub fn get_target_camera_position_2() -> Vec3 {
-    Vec3::new(-27.94596, 10.068317, -112.5712)
+    Vec3::new(-5.0, 0.5, 0.25)
 }
 
 pub fn get_target_camera_direction() -> Quat {
@@ -195,7 +195,7 @@ pub fn get_target_camera_direction() -> Quat {
 }
 
 pub fn get_target_camera_direction_2() -> Quat {
-    Quat::from_axis_angle(Vec3::Y, -PI / 6.0)
+    Quat::from_axis_angle(Vec3::Y, -PI / 2.0)
 }
 
 pub fn get_arena_center() -> Vec3 {

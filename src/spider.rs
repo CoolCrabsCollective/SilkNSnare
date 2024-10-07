@@ -35,13 +35,13 @@ pub struct SnareTimer {
 }
 
 #[derive(Component)]
-struct Spider {
-    food: f64,
-    max_food: f64,
-    current_position: SpiderPosition,
-    current_rotation: f32,
-    target_position: SpiderPosition,
-    snaring_insect: Option<Entity>,
+pub struct Spider {
+    pub food: f64,
+    pub max_food: f64,
+    pub current_position: SpiderPosition,
+    pub current_rotation: f32,
+    pub target_position: SpiderPosition,
+    pub snaring_insect: Option<Entity>,
 }
 
 #[derive(Copy, Clone)]
@@ -150,6 +150,8 @@ fn update_spider(
         return;
     }
     let (mut spider, mut spider_transform) = result.unwrap();
+
+    spider.food -= 1.0 * time.delta_seconds_f64();
     let web = &mut *web_query.single_mut();
     /*// tree position debug code
     if let Some(position) = q_windows.single().cursor_position() {

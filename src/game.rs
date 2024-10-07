@@ -1,10 +1,11 @@
+use crate::health::HealthBar;
 use crate::mesh_loader::{self, load_level, MeshLoader};
 use crate::skybox::{Cubemap, CUBEMAPS};
 use crate::web::WebSimulationPlugin;
 use bevy::asset::LoadState;
 use bevy::audio::PlaybackMode::Loop;
 use bevy::audio::Volume;
-use bevy::color::palettes::basic::RED;
+use bevy::color::palettes::basic::{BLACK, LIME, RED};
 use bevy::color::palettes::css::ORANGE_RED;
 use bevy::core_pipeline::Skybox;
 use bevy::math::VectorSpace;
@@ -181,6 +182,50 @@ fn setup(
             ..default()
         },
     ));
+
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::SpaceBetween,
+                ..default()
+            },
+            ..default()
+        })
+        .with_children(|parent| {
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        width: Val::Px(200.0),
+                        height: Val::Px(20.0),
+                        position_type: PositionType::Absolute,
+                        right: Val::Px(20.),
+                        bottom: Val::Px(20.),
+                        border: UiRect::all(Val::Px(2.)),
+                        ..default()
+                    },
+                    border_color: BLACK.into(),
+                    background_color: Color::srgb(0.4, 0.4, 0.4).into(),
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent.spawn((
+                        HealthBar,
+                        NodeBundle {
+                            style: Style {
+                                width: Val::Percent(100.0),
+                                height: Val::Percent(100.0),
+                                position_type: PositionType::Relative,
+                                left: Val::Px(0.0),
+                                ..default()
+                            },
+                            background_color: Color::srgb(0.6, 0.6, 1.).into(),
+                            ..default()
+                        },
+                    ));
+                });
+        });
 
     commands.insert_resource(Cubemap {
         is_loaded: false,

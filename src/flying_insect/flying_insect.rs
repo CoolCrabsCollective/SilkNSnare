@@ -1,17 +1,15 @@
 use super::fruit_fly::DAVID_DEBUG;
 use crate::flying_insect::fruit_fly::{fly_hentai_anime_setup, spawn_fruit_fly, Animation};
 use crate::game::GameState;
+use crate::mesh_loader::{self, load_level, MeshLoader};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::Web;
 use bevy::app::{App, Plugin, Startup, Update};
-use bevy::asset::{Assets, Handle};
+use bevy::asset::{AssetServer, Assets, Handle};
 use bevy::color::Color;
 use bevy::math::{Mat3, Vec3};
 use bevy::pbr::StandardMaterial;
-use bevy::prelude::{
-    default, in_state, Commands, Component, Entity, IntoSystemConfigs, Mesh, Meshable, PbrBundle,
-    Quat, Query, Res, ResMut, Resource, Sphere, Time, Timer, TimerMode, Transform, With, Without,
-};
+use bevy::{log, prelude::*};
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
@@ -27,11 +25,12 @@ pub struct FruitFlySpawnTimer {
 pub struct EnsnareRollModel {
     pub mesh: Handle<Mesh>,
     pub material: Handle<StandardMaterial>,
+    pub transform: Transform,
 }
 
 impl Plugin for FlyingInsectPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, generate_ensnare_roll_model);
+        app.add_systems(Startup, load_ensnare_roll_model.after(mesh_loader::setup));
         app.add_systems(Update, move_flying_insect.run_if(in_state(GameState::Game)));
         app.add_systems(Update, spawn_fruit_fly.run_if(in_state(GameState::Game)));
         app.add_systems(
@@ -52,9 +51,11 @@ impl Plugin for FlyingInsectPlugin {
                 TimerMode::Repeating,
             ),
         });
+
         app.insert_resource(EnsnareRollModel {
             mesh: Default::default(),
             material: Default::default(),
+            transform: Default::default(),
         });
         app.insert_resource(Animation {
             animation_list: vec![],
@@ -252,16 +253,14 @@ fn insect_ensnared_tick_cooking_and_free(
     }
 }
 
-fn generate_ensnare_roll_model(
+fn load_ensnare_roll_model(
+    mut asset_server: ResMut<AssetServer>,
+    mut mesh_loader: ResMut<MeshLoader>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut ensnare_roll_model: ResMut<EnsnareRollModel>,
 ) {
-    ensnare_roll_model.mesh = meshes.add(Sphere { radius: 0.05 }.mesh().ico(3).unwrap());
-    ensnare_roll_model.material = materials.add(StandardMaterial {
-        base_color: Color::srgb(125.0, 125.0, 125.0),
-        ..default()
-    });
+    load_level("food.glb".into(), &mut asset_server, &mut mesh_loader);
 }
 
 fn update_ensnare_roll_model(
@@ -273,10 +272,17 @@ fn update_ensnare_roll_model(
     for (mut insect, insect_trans) in insects_query.iter_mut() {
         if insect.ensnared_and_rolled {
             if insect.rolled_ensnare_entity == None {
+                log::warn!(
+                    "adding cocoon mesh: {:?}, {:?}",
+                    ensnare_roll_model.mesh.clone(),
+                    insect_trans.scale
+                );
                 let entity = commands.spawn(
                     (PbrBundle {
                         mesh: ensnare_roll_model.mesh.clone(),
                         material: ensnare_roll_model.material.clone(),
+                        transform: insect_trans
+                            .with_scale(insect_trans.scale.x * ensnare_roll_model.transform.scale),
                         ..default()
                     }),
                 );
@@ -293,6 +299,8 @@ fn update_ensnare_roll_model(
             };
 
             ensnared_trans.translation = insect_trans.translation;
+            ensnared_trans.rotation =
+                insect_trans.rotation * Quat::from_axis_angle(Vec3::X, PI / 2.0);
         } else if insect.rolled_ensnare_entity != None {
             commands
                 .entity(insect.rolled_ensnare_entity.unwrap())
