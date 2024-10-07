@@ -209,6 +209,9 @@ fn insect_ensnared_tick_cooking_and_free(
         insect.freed_timer.tick(time.delta());
         if insect.freed_timer.just_finished() {
             free_enemy_from_web(&mut commands, entity, &mut web_query);
+            if insect.rolled_ensnare_entity != None {
+                commands.entity(insect.rolled_ensnare_entity.unwrap()).despawn();
+            }
 
             insect.cooking_timer.reset();
             insect.cooking_timer.pause();
@@ -222,6 +225,7 @@ fn insect_ensnared_tick_cooking_and_free(
         if insect.ensnared_and_rolled {
             if insect.cooking_timer.paused() {
                 insect.cooking_timer.unpause();
+                insect.freed_timer.reset();
             }
 
             insect.cooking_timer.tick(time.delta());
