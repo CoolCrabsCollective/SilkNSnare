@@ -38,8 +38,8 @@ pub fn setup(mut commands: Commands) {
 
 pub fn load_level(
     asset_path: String,
-    asset_server: Res<AssetServer>,
-    mut mesh_loader: ResMut<MeshLoader>,
+    mut asset_server: &mut ResMut<AssetServer>,
+    mut mesh_loader: &mut ResMut<MeshLoader>,
 ) {
     mesh_loader.0.push(LoadedGltf {
         gltf_handle: asset_server.load(asset_path),
