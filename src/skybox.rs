@@ -4,7 +4,7 @@ use bevy::render::texture::CompressedImageFormats;
 
 pub const CUBEMAPS: &[(&str, CompressedImageFormats)] = &[
     ("moon.png", CompressedImageFormats::NONE),
-    ("moon_purple.png", CompressedImageFormats::NONE),
+    // ("moon_purple.png", CompressedImageFormats::NONE),
 ];
 
 #[derive(Resource)]
