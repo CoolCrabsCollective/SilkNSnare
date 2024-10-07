@@ -9,7 +9,7 @@ use std::time::Duration;
 
 pub struct FlyingObstaclePlugin;
 
-pub const ROCK_TIMER_START: f32 = 1000.0;
+pub const ROCK_TIMER_START: f32 = 15000.0;
 pub const ROCK_TIMER_MULTIPLIER: f32 = 0.05;
 
 #[derive(Resource)]
