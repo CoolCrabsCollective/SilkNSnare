@@ -132,6 +132,7 @@ impl Plugin for SpiderPlugin {
     }
 }
 fn update_spider(
+    mut commands: Commands,
     mut spider_query: Query<(&mut Spider, &mut Transform)>,
     q_windows: Query<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
@@ -192,6 +193,19 @@ fn update_spider(
                 );
             }
         }
+    } else if buttons.just_pressed(MouseButton::Right) {
+        if let Some(position) = q_windows.single().cursor_position() {
+            let (camera, camera_global_transform) = camera_query.single();
+
+            if let Some(ray) = camera.viewport_to_world(&camera_global_transform, position) {
+                let n = spider_plane.plane.xyz();
+                let d = spider_plane.plane.w;
+                let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
+                let p = ray.origin + ray.direction * λ;
+
+                web.破壊する(p, &mut commands);
+            }
+        }
     }
 
     move_spider(web, &mut *spider, &time);
@@ -244,7 +258,8 @@ fn handle_ensnared_insect_collision(
                 commands
                     .entity(insect.rolled_ensnare_entity.unwrap())
                     .despawn();
-                free_enemy_from_web(commands, entity, web_query);
+
+                free_enemy_from_web(commands, entity, &mut *web_query.single_mut());
                 commands.entity(entity).despawn();
             } else if !insect.ensnared_and_rolled {
                 s.snaring_insect = Some(entity); // only start rolling

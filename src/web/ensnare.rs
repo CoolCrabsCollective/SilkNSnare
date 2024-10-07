@@ -156,16 +156,7 @@ pub fn ensnare_enemies(
     }
 }
 
-pub fn free_enemy_from_web(
-    mut commands: &mut Commands,
-    entity: Entity,
-    mut web_query: &mut Query<&mut Web>,
-) {
-    let Ok(mut web) = web_query.get_single_mut() else {
-        error!("ERROR NO WEB OR MORE THAN ONE WEB");
-        return;
-    };
-
+pub fn free_enemy_from_web(mut commands: &mut Commands, entity: Entity, web: &mut Web) {
     commands.entity(entity).remove::<Ensnared>();
     commands.entity(entity).insert(Freed);
 
