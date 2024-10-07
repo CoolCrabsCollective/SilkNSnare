@@ -1,3 +1,10 @@
+use crate::config::{
+    COLLISION_GROUP_ENEMIES, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN, COLLISION_GROUP_WALLS,
+};
+use crate::flying_insect::flying_insect::EnsnareRollModel;
+use crate::game::ORANGE_LIGHT_COLOR;
+use crate::pumpkin::Pumpkin;
+use crate::tree::get_target_camera_position;
 use bevy::asset::UntypedAssetId;
 use bevy::{
     asset::LoadState,
@@ -8,13 +15,6 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group};
 use std::any::Any;
-
-use crate::config::{
-    COLLISION_GROUP_ENEMIES, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN, COLLISION_GROUP_WALLS,
-};
-use crate::game::ORANGE_LIGHT_COLOR;
-use crate::pumpkin::Pumpkin;
-use crate::tree::get_target_camera_position;
 
 pub struct MeshLoaderPlugin;
 
@@ -51,12 +51,13 @@ pub fn load_level(
 #[allow(clippy::too_many_arguments)]
 fn process_loaded_gltfs(
     mut commands: Commands,
-    meshes: Res<Assets<Mesh>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     gltf_meshes: Res<Assets<GltfMesh>>,
     nodes: Res<Assets<GltfNode>>,
     mut mesh_loader: ResMut<MeshLoader>,
     gltf_assets: Res<Assets<Gltf>>,
+    mut ensnare_roll_model: ResMut<EnsnareRollModel>,
 ) {
     for loaded_gltf in mesh_loader.0.iter_mut() {
         if loaded_gltf.processed {
@@ -69,8 +70,23 @@ fn process_loaded_gltfs(
 
         let first_scene_handle = gltf.scenes[0].clone();
 
+        let mut should_spawn = true;
+
         for (name, node_handle) in &gltf.named_nodes {
             println!("{}", name);
+            if name.to_lowercase().contains("trap") {
+                if let (Some(mesh), Some(material), Some(transform)) = (
+                    get_mesh_from_gltf_node(node_handle, &meshes, &gltf_meshes, &nodes).cloned(),
+                    get_material_from_gltf_node(node_handle, &gltf_meshes, &nodes),
+                    nodes.get(node_handle).map(|node| node.transform),
+                ) {
+                    ensnare_roll_model.material = material;
+                    ensnare_roll_model.transform = transform;
+                    ensnare_roll_model.mesh = meshes.add(mesh);
+                    should_spawn = false;
+                }
+            }
+
             if name.to_lowercase().contains("terrain") || name.to_lowercase().contains("wall") {
                 info!("Generating collider from level object: {name:?}");
                 if let (Some(mesh), Some(material_handle), Some(transform)) = (
@@ -140,10 +156,12 @@ fn process_loaded_gltfs(
             }
         }
 
-        commands.spawn(SceneBundle {
-            scene: first_scene_handle,
-            ..default()
-        });
+        if should_spawn {
+            commands.spawn(SceneBundle {
+                scene: first_scene_handle,
+                ..default()
+            });
+        }
 
         loaded_gltf.processed = true;
     }
@@ -151,7 +169,7 @@ fn process_loaded_gltfs(
 
 fn get_mesh_from_gltf_node<'a>(
     node_handle: &Handle<GltfNode>,
-    meshes: &'a Res<Assets<Mesh>>,
+    meshes: &'a ResMut<Assets<Mesh>>,
     gltf_meshes: &Res<Assets<GltfMesh>>,
     nodes: &Res<Assets<GltfNode>>,
 ) -> Option<&'a Mesh> {
