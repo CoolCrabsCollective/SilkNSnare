@@ -10,6 +10,7 @@ use crate::web::render::WebSegmentCollision;
 use crate::web::spring::Spring;
 use bevy::prelude::*;
 use bevy_rapier3d::pipeline::CollisionEvent;
+use bevy_rapier3d::prelude::Collider;
 use ensnare::{debug_ensnare_entities, ensnare_enemies, update_ensnared_entities};
 use render::{clear_web, render_web};
 use std::f32::consts::PI;
@@ -445,6 +446,7 @@ fn handle_obstacles_destroy_web(
                 ((1.0 - t) * first_particle_position) + (t * second_particle_position);
             web.破壊する(obstacle_position, &insect_query, &mut commands);
             commands.entity(entity).insert(Breaker);
+            commands.entity(entity).remove::<Collider>();
         };
 
     for collision_event in collision_events.read() {
