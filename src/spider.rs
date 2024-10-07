@@ -735,10 +735,10 @@ fn set_new_target(
             hack_swap_removed_a_spring = true;
         } else {
             let in_tree = 树里有点吗(position, rapier_context, cam, cam_transform);
-            if !in_tree {
-                println!("[FUCK] Trying to create new spring start point but NOT IN TREE");
-                return;
-            }
+            //if !in_tree {
+            //    println!("[FUCK] Trying to create new spring start point but NOT IN TREE");
+            //    return;
+            //}
 
             web.particles.push(Particle {
                 position: position,
@@ -747,7 +747,7 @@ fn set_new_target(
                 impulse: Default::default(),
                 impulse_duration: 0.0,
                 mass: 0.0,
-                pinned: true,
+                pinned: in_tree,
             });
         }
         web.particles.len() - 1
