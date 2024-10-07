@@ -2,14 +2,16 @@ use crate::flying_insect::fruit_fly::spawn_fruit_fly;
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::ensnare::EnsnaredEntity;
 use crate::web::Web;
-use bevy::app::{App, Plugin, Update};
+use bevy::app::{App, Plugin, Startup, Update};
 use bevy::log::error;
 use bevy::math::{Mat3, Vec3};
-use bevy::prelude::{Commands, Component, Entity, Quat, Query, Res, Resource, Time, Timer, TimerMode, Transform, With, Without};
+use bevy::prelude::{default, Commands, Component, Entity, Mesh, Meshable, ParamSet, PbrBundle, Quat, Query, Res, ResMut, Resource, Sphere, Time, Timer, TimerMode, Transform, With, Without};
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
-
+use bevy::asset::{Assets, Handle};
+use bevy::color::Color;
+use bevy::pbr::StandardMaterial;
 use super::fruit_fly::DAVID_DEBUG;
 
 pub struct FlyingInsectPlugin;
@@ -19,16 +21,28 @@ pub struct FruitFlySpawnTimer {
     pub timer: Timer,
 }
 
+#[derive(Resource)]
+pub struct EnsnareRollModel {
+    pub mesh: Handle<Mesh>,
+    pub material: Handle<StandardMaterial>
+}
+
 impl Plugin for FlyingInsectPlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(Startup, generate_ensnare_roll_model);
         app.add_systems(Update, move_flying_insect);
         app.add_systems(Update, spawn_fruit_fly);
         app.add_systems(Update, insect_ensnared_tick_cooking_and_free);
+        app.add_systems(Update, update_ensnare_roll_model);
         app.insert_resource(FruitFlySpawnTimer {
             timer: Timer::new(
                 Duration::from_millis(if DAVID_DEBUG { 3000 } else { 500 }),
                 TimerMode::Repeating,
             ),
+        });
+        app.insert_resource(EnsnareRollModel {
+            mesh: Default::default(),
+            material: Default::default(),
         });
     }
 }
@@ -108,7 +122,8 @@ pub struct FlyingInsect {
     pub ensnared_and_rolled: bool,
     pub cooked: bool,
     pub cooking_timer: Timer,
-    pub freed_timer: Timer
+    pub freed_timer: Timer,
+    pub rolled_ensnare_entity: Option<Entity>
 }
 
 impl FlyingInsect {
@@ -131,6 +146,7 @@ impl FlyingInsect {
                 Duration::from_secs(15),
                 TimerMode::Repeating,
             ),
+            rolled_ensnare_entity: None,
         };
 
         new_flying.freed_timer.pause();
@@ -193,6 +209,9 @@ fn insect_ensnared_tick_cooking_and_free(
         insect.freed_timer.tick(time.delta());
         if insect.freed_timer.just_finished() {
             free_enemy_from_web(&mut commands, entity, &mut web_query);
+            if insect.rolled_ensnare_entity != None {
+                commands.entity(insect.rolled_ensnare_entity.unwrap()).despawn();
+            }
 
             insect.cooking_timer.reset();
             insect.cooking_timer.pause();
@@ -206,6 +225,7 @@ fn insect_ensnared_tick_cooking_and_free(
         if insect.ensnared_and_rolled {
             if insect.cooking_timer.paused() {
                 insect.cooking_timer.unpause();
+                insect.freed_timer.reset();
             }
 
             insect.cooking_timer.tick(time.delta());
@@ -214,9 +234,55 @@ fn insect_ensnared_tick_cooking_and_free(
                 insect.cooking_timer.reset();
                 insect.cooking_timer.pause();
 
-                insect.freed_timer.pause();
                 insect.freed_timer.reset();
             }
+        }
+    }
+}
+
+fn generate_ensnare_roll_model(
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut ensnare_roll_model: ResMut<EnsnareRollModel>
+) {
+    ensnare_roll_model.mesh = meshes.add(Sphere { radius: 0.05 }.mesh().ico(3).unwrap());
+    ensnare_roll_model.material = materials.add(StandardMaterial {
+        base_color: Color::srgb(125.0, 125.0, 125.0),
+        ..default()
+    });
+}
+
+fn update_ensnare_roll_model(
+    mut commands: Commands,
+    mut ensnare_roll_model: ResMut<EnsnareRollModel>,
+    mut insects_query: Query<(&mut FlyingInsect, &Transform), With<Ensnared>>,
+    mut transform_query: Query<&mut Transform, Without<Ensnared>>
+) {
+    for (mut insect, insect_trans) in insects_query.iter_mut() {
+        if insect.ensnared_and_rolled {
+            if insect.rolled_ensnare_entity == None {
+                let entity = commands.spawn((
+                    PbrBundle {
+                        mesh: ensnare_roll_model.mesh.clone(),
+                        material: ensnare_roll_model.material.clone(),
+                        ..default()
+                    }
+                ));
+
+                insect.rolled_ensnare_entity = Some(entity.id());
+                return;
+            }
+
+            // Move ensnared roll model with insect
+            let Ok(mut ensnared_trans) = transform_query.get_mut(insect.rolled_ensnare_entity.unwrap()) else {
+                panic!("NO TRANSFORM FOUND FOR ROLLED ENSNARE MODEL FUCKING SHIT");
+            };
+
+            ensnared_trans.translation = insect_trans.translation;
+        } else if insect.rolled_ensnare_entity != None {
+                commands.entity(insect.rolled_ensnare_entity.unwrap()).despawn();
+
+                insect.rolled_ensnare_entity = None;
         }
     }
 }
