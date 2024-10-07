@@ -20,12 +20,12 @@ pub fn spawn_rock(
     r_spawn_timer.timer.tick(time.delta());
     if r_spawn_timer.timer.just_finished() {
         let mut rng = rand::thread_rng();
-        let x_begin = rng.gen_range(-4.0..0.0);
-        let y_begin = rng.gen_range(0.0..1.0);
+        let x_begin = rng.gen_range(-3.0..0.0);
+        let y_begin = 1.0;
         let start_pos = Vec3::new(x_begin, y_begin, -2.0);
 
-        let y_begin_vel = rng.gen_range(0.4..6.0);
-        let z_begin_vel = rng.gen_range(0.5..7.0);
+        let y_begin_vel = rng.gen_range(0.75..3.25);
+        let z_begin_vel = 4.0;
         let vel = Vec3::new(0.0, y_begin_vel, z_begin_vel);
 
        commands
@@ -50,7 +50,7 @@ pub fn spawn_rock(
                    inherited_visibility: Default::default(),
                    view_visibility: Default::default(),
                },
-               Collider::capsule_y(3.0, 3.0),
+               Collider::capsule_y(1.0, 1.0),
            ))
            .insert(ActiveEvents::COLLISION_EVENTS)
            .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC)
