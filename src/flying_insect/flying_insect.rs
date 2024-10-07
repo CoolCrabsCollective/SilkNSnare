@@ -306,9 +306,10 @@ fn update_ensnare_roll_model(
                     //     insect.snare_roll_progress,
                     //     insect.cooking_progress
                     // );
-                    let cook_t = (1.0 - insect.cooking_progress).clamp(0.0, 1.0);
-                    material.base_color =
-                        Color::srgba(1.0, cook_t, cook_t, insect.snare_roll_progress);
+                    // let cook_t = (1.0 - insect.cooking_progress).clamp(0.0, 1.0);
+                    // material.base_color =
+                    //     Color::srgba(1.0, cook_t, cook_t, insect.snare_roll_progress);
+                    material.base_color.set_alpha(insect.snare_roll_progress);
                 } else {
                     log::error!("no mat 2");
                 }

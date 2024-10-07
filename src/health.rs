@@ -48,7 +48,7 @@ fn update_death_screen(
     time: Res<Time>,
 ) {
     if is_dead.is_dead {
-        println!("{:?}: ", is_dead.death_camera_progress);
+        // println!("{:?}: ", is_dead.death_camera_progress);
         if is_dead.death_camera_progress < 1.0 {
             let s = is_dead.death_camera_progress;
             let t = 3.0 * s * s - 2.0 * s * s * s;
