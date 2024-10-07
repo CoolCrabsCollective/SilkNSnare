@@ -131,7 +131,7 @@ pub fn get_target_camera_position() -> Vec3 {
 }
 
 pub fn get_target_camera_position_2() -> Vec3 {
-    Vec3::new(-3.0, 0.5, 1.75)
+    Vec3::new(-3.0, 0.5, 3.75)
 }
 
 pub fn get_target_camera_direction() -> Quat {
