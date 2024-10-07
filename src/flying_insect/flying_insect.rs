@@ -219,7 +219,7 @@ fn insect_ensnared_tick_cooking_and_free(
 
         insect.freed_timer.tick(time.delta());
         if insect.freed_timer.just_finished() {
-            free_enemy_from_web(&mut commands, entity, &mut web_query);
+            free_enemy_from_web(&mut commands, entity, &mut *web_query.single_mut());
             if insect.rolled_ensnare_entity != None {
                 commands
                     .entity(insect.rolled_ensnare_entity.unwrap())
