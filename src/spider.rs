@@ -30,11 +30,6 @@ struct WebPlane {
     left: Vec3,
 }
 
-#[derive(Resource)]
-pub struct SnareTimer {
-    pub timer: Timer,
-}
-
 #[derive(Component)]
 pub struct Spider {
     pub food: f64,
@@ -127,12 +122,10 @@ impl Plugin for SpiderPlugin {
             plane: Vec4::new(0.0, 0.0, -1.0, 0.0),
             left: Vec3::new(0.0, 1.0, 0.0),
         });
-        app.insert_resource(SnareTimer {
-            timer: Timer::new(Duration::from_millis(2000), TimerMode::Repeating),
-        });
     }
 }
 fn update_spider(
+    mut commands: Commands,
     mut spider_query: Query<(&mut Spider, &mut Transform)>,
     q_windows: Query<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
@@ -199,6 +192,19 @@ fn update_spider(
                 );
             }
         }
+    } else if buttons.just_pressed(MouseButton::Right) {
+        if let Some(position) = q_windows.single().cursor_position() {
+            let (camera, camera_global_transform) = camera_query.single();
+
+            if let Some(ray) = camera.viewport_to_world(&camera_global_transform, position) {
+                let n = spider_plane.plane.xyz();
+                let d = spider_plane.plane.w;
+                let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
+                let p = ray.origin + ray.direction * λ;
+
+                web.破壊する(p, &mut commands);
+            }
+        }
     }
 
     move_spider(web, &mut *spider, &time);
@@ -224,7 +230,6 @@ fn handle_ensnared_insect_collision(
     mut insects_query: Query<(&mut FlyingInsect), With<Ensnared>>,
     mut collision_events: EventReader<CollisionEvent>,
     time: Res<Time>,
-    mut ss_snare_timer: ResMut<SnareTimer>,
 ) {
     let result = spider_query.get_single_mut();
 
@@ -245,15 +250,16 @@ fn handle_ensnared_insect_collision(
                 error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
                 return;
             };
-            if insect.ensnared_and_rolled & insect.cooked {
+            if insect.snare_roll_progress >= 1.0 && insect.cooking_progress >= 1.0 {
                 // TIME TO EAT!!!!!!
-                insect.ensnared_and_rolled = false;
+                insect.snare_roll_progress = 0.0; // TODO: why do we need this?
                 commands
                     .entity(insect.rolled_ensnare_entity.unwrap())
                     .despawn();
-                free_enemy_from_web(commands, entity, web_query);
+
+                free_enemy_from_web(commands, entity, &mut *web_query.single_mut());
                 commands.entity(entity).despawn();
-            } else if !insect.ensnared_and_rolled {
+            } else if insect.snare_roll_progress == 0.0 {
                 s.snaring_insect = Some(entity); // only start rolling
                 insect.freed_timer.pause();
             }
@@ -343,32 +349,48 @@ fn handle_ensnared_insect_collision(
             }
         }
 
+        let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) else {
+            error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
+            return;
+        };
+
         if !still_snaring {
-            let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) else {
-                error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
-                return;
-            };
+            if insect.snare_roll_progress < 0.99 {
+                insect.snare_roll_progress = 0.0;
+            }
+            if insect.cooking_progress < 0.99 {
+                insect.cooking_progress = 0.0;
+                insect.cooking_timer.reset();
+            }
             insect.freed_timer.unpause();
+            insect.snare_timer.reset();
+            insect.snare_timer.pause();
             spider.snaring_insect = None;
-            ss_snare_timer.timer.reset();
-            ss_snare_timer.timer.pause();
             return;
         }
 
-        if ss_snare_timer.timer.paused() {
-            ss_snare_timer.timer.unpause()
+        if insect.snare_timer.paused() {
+            insect.snare_timer.unpause()
         }
-        ss_snare_timer.timer.tick(time.delta());
+        insect.snare_timer.tick(time.delta());
 
-        if ss_snare_timer.timer.just_finished() {
-            ss_snare_timer.timer.reset();
-            ss_snare_timer.timer.pause();
+        insect.snare_roll_progress +=
+            time.delta_seconds() / insect.snare_timer.duration().as_secs_f32();
 
-            // Mark insect as rolled, wait on timeout before allowing to eat
-            if let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) {
-                insect.ensnared_and_rolled = true;
-                spider.snaring_insect = None;
-            };
+        if insect.snare_timer.just_finished() {
+            insect.snare_timer.reset();
+            insect.snare_timer.pause();
+
+            let mut web = web_query.single_mut();
+            for spring in &mut web.springs {
+                for ensnared in &mut spring.ensnared_entities {
+                    if ensnared.entity.eq(&spider.snaring_insect.unwrap()) {
+                        ensnared.done_ensnaring = true;
+                        break;
+                    }
+                }
+            }
+            spider.snaring_insect = None;
         }
         if spider.snaring_insect != None {
             match insects_query.get_mut(spider.snaring_insect.unwrap()) {

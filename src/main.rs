@@ -1,4 +1,5 @@
 use crate::flying_insect::flying_insect::FlyingInsectPlugin;
+use crate::flying_obstacle::flying_obstacle::FlyingObstaclePlugin;
 use crate::game::GamePlugin;
 use crate::health::HealthPlugin;
 use crate::mesh_loader::MeshLoaderPlugin;
@@ -22,9 +23,11 @@ mod tree;
 mod web;
 
 mod flying_insect;
+mod flying_obstacle;
 mod health;
 mod skybox;
 mod title_screen;
+mod ui;
 
 fn main() {
     let mut app = App::new();
@@ -70,6 +73,7 @@ fn main() {
     app.add_plugins(SpiderPlugin);
     app.add_plugins(FlyingInsectPlugin);
     app.add_plugins(HealthPlugin);
+    app.add_plugins(FlyingObstaclePlugin);
 
     app.run();
 }

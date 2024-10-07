@@ -10,7 +10,7 @@ use bevy::{
 };
 use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
-use std::f32::consts::PI;
+use std::{collections::HashMap, f32::consts::PI};
 
 pub const WEB_SILK_THICKNESS: f32 = 0.03;
 pub const WEB_SILK_PRISM_BASE: i32 = 4;

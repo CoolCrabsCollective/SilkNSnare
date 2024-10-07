@@ -3,7 +3,7 @@ mod render;
 pub mod spring;
 
 use crate::tree::get_arena_center;
-use crate::web::ensnare::split_ensnared_entities_for_spring_split;
+use crate::web::ensnare::{free_enemy_from_web, split_ensnared_entities_for_spring_split};
 use crate::web::spring::Spring;
 use bevy::prelude::*;
 use ensnare::{debug_ensnare_entities, ensnare_enemies, update_ensnared_entities};
@@ -29,6 +29,77 @@ pub struct Web {
     pub particles: Vec<Particle>,
     pub springs: Vec<Spring>,
     pub mass_per_unit_length: f32,
+}
+
+impl Web {
+    pub fn 破壊する(&mut self, ポイント: Vec3, commands: &mut Commands) {
+        let カウント = self.springs.len();
+        for インデックス in 0..カウント {
+            let 粒子1 = self.particles[self.springs[インデックス].first_index].position;
+            let 粒子2 = self.particles[self.springs[インデックス].second_index].position;
+
+            let 差1 = (ポイント - 粒子1).normalize();
+            let 差2 = (ポイント - 粒子2).normalize();
+
+            if 差1.dot(差2) > -0.98 {
+                continue;
+            }
+
+            let あるバネのパラメーター = (ポイント - 粒子1).length() / (粒子2 - 粒子1).length();
+            while self.springs[インデックス].ensnared_entities.len() > 0 {
+                let 罠にかかった = &self.springs[インデックス].ensnared_entities[0];
+                free_enemy_from_web(commands, 罠にかかった.entity, self);
+            }
+
+            let あるバネのポイント =
+                粒子2 * あるバネのパラメーター + 粒子1 * (1.0 - あるバネのパラメーター);
+
+            self.particles.push(Particle {
+                position: あるバネのポイント,
+                velocity: Default::default(),
+                force: Default::default(),
+                impulse: Default::default(),
+                impulse_duration: 0.0,
+                mass: 0.0,
+                pinned: false,
+            });
+
+            self.particles.push(Particle {
+                position: あるバネのポイント,
+                velocity: Default::default(),
+                force: Default::default(),
+                impulse: Default::default(),
+                impulse_duration: 0.0,
+                mass: 0.0,
+                pinned: false,
+            });
+
+            let 新粒子1 = self.particles.len() - 2;
+            let 新粒子2 = self.particles.len() - 1;
+
+            self.springs.push(Spring {
+                first_index: self.springs[インデックス].first_index,
+                second_index: 新粒子1,
+                stiffness: self.springs[インデックス].stiffness,
+                damping: self.springs[インデックス].damping,
+                rest_length: self.springs[インデックス].rest_length
+                    * あるバネのパラメーター,
+                ensnared_entities: vec![],
+            });
+
+            self.springs.push(Spring {
+                first_index: 新粒子2,
+                second_index: self.springs[インデックス].second_index,
+                stiffness: self.springs[インデックス].stiffness,
+                damping: self.springs[インデックス].damping,
+                rest_length: self.springs[インデックス].rest_length
+                    * (1.0 - あるバネのパラメーター),
+                ensnared_entities: vec![],
+            });
+
+            self.springs.swap_remove(インデックス);
+        }
+    }
 }
 
 impl Web {
