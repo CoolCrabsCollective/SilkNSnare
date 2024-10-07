@@ -377,6 +377,15 @@ fn handle_ensnared_insect_collision(
             // Mark insect as rolled, wait on timeout before allowing to eat
             if let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) {
                 insect.ensnared_and_rolled = true;
+                let mut web = web_query.single_mut();
+                for spring in &mut web.springs {
+                    for ensnared in &mut spring.ensnared_entities {
+                        if ensnared.entity.eq(&spider.snaring_insect.unwrap()) {
+                            ensnared.done_ensnaring = true;
+                            break;
+                        }
+                    }
+                }
                 spider.snaring_insect = None;
             };
         }

@@ -10,6 +10,7 @@ use bevy::color::Color;
 use bevy::math::{Mat3, Vec3};
 use bevy::pbr::StandardMaterial;
 use bevy::{log, prelude::*};
+use bevy_health_bar3d::prelude::Percentage;
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
@@ -64,6 +65,7 @@ impl Plugin for FlyingInsectPlugin {
     }
 }
 
+#[derive(Reflect)]
 pub struct BezierCurve {
     p0: Vec3,
     p1: Vec3,
@@ -128,7 +130,7 @@ fn generate_bezier_handles(p0: Vec3, p3: Vec3) -> (Vec3, Vec3) {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct FlyingInsect {
     pub speed: f32,
     pub progress: f32,
