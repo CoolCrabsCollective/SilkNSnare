@@ -3,6 +3,7 @@ use crate::flying_insect::flying_insect::{BezierCurve, FlyingInsect};
 use crate::game::GameState;
 use crate::health::IsDead;
 use crate::tree::{树里有小路吗, 树里有点吗};
+use crate::ui::progress_bar::CookingInsect;
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
@@ -266,7 +267,12 @@ fn handle_ensnared_insect_collision(
                     .despawn();
 
                 free_enemy_from_web(commands, insect_entity, &mut *web_query.single_mut());
-                commands.entity(insect_entity).despawn();
+                commands
+                    .entity(insect_entity)
+                    .remove::<BarSettings<CookingInsect>>();
+                commands.entity(insect_entity).remove::<CookingInsect>();
+                commands.entity(insect_entity).despawn_recursive();
+                println!("DESPAWN!!!!!!");
             } else if insect.snare_roll_progress == 0.0 {
                 if !s.snaring_insects.contains(&insect_entity) {
                     log::warn!("start snaring fly {:?}", insect_entity);
@@ -403,6 +409,9 @@ fn handle_ensnared_insect_collision(
         if insect.snare_timer.just_finished() {
             insect.snare_timer.reset();
             insect.snare_timer.pause();
+            commands
+                .entity(*snaring_insect_entity)
+                .insert(CookingInsect { progress: 0.0 });
 
             let mut web = web_query.single_mut();
             for spring in &mut web.springs {
