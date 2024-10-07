@@ -29,6 +29,9 @@ pub struct Particle {
 }
 
 #[derive(Component)]
+pub struct Breaker;
+
+#[derive(Component)]
 pub struct Web {
     pub particles: Vec<Particle>,
     pub springs: Vec<Spring>,
@@ -404,14 +407,14 @@ fn handle_obstacles_destroy_web(
     insect_query: Query<&FlyingInsect>,
     mut collision_events: EventReader<CollisionEvent>,
     web_segment_collisions_query: Query<&WebSegmentCollision>,
-    mut obstacle_query: Query<(&mut FlyingObstacle, &mut Transform)>,
+    mut obstacle_query: Query<(&mut FlyingObstacle, &mut Transform), Without<Breaker>>,
 ) {
     let Ok(mut web) = web_query.get_single_mut() else {
         panic!("FUCK NO WEB");
     };
 
     let mut handle_spring_break =
-        |web: &mut Web, web_segment: &WebSegmentCollision, obstacle_trans: Vec3| {
+        |web: &mut Web, web_segment: &WebSegmentCollision, obstacle_trans: Vec3, entity: Entity| {
             let spring = web.springs.get(web_segment.spring_index).unwrap();
             let first_particle_position = web.particles.get(spring.first_index).unwrap().position;
             let second_particle_position = web.particles.get(spring.second_index).unwrap().position;
@@ -420,9 +423,23 @@ fn handle_obstacles_destroy_web(
                 .dot(second_particle_position - first_particle_position)
                 / (second_particle_position - first_particle_position)
                     .dot(second_particle_position - first_particle_position);
+
+            if obstacle_position_t < -0.1 || obstacle_position_t > 1.1 {
+                error!(
+                    "不冰淇淋, \
+            first_particle_position={first_particle_position}, \
+            second_particle_position={second_particle_position}, \
+            obstacle_trans={obstacle_trans}, \
+            obstacle_position_t={obstacle_position_t}"
+                );
+            }
+
+            let t = obstacle_position_t.clamp(0.0, 1.0);
+
             let obstacle_position =
-                obstacle_position_t * second_particle_position + first_particle_position;
+                ((1.0 - t) * first_particle_position) + (t * second_particle_position);
             web.破壊する(obstacle_position, &insect_query, &mut commands);
+            commands.entity(entity).insert(Breaker);
         };
 
     for collision_event in collision_events.read() {
@@ -434,16 +451,16 @@ fn handle_obstacles_destroy_web(
                 web_segment_collisions_query.get(*entity_b),
             ) {
                 (Ok((_, trans)), Err(_), Ok(web_segment), Err(_)) => {
-                    handle_spring_break(&mut web, web_segment, trans.translation);
+                    handle_spring_break(&mut web, web_segment, trans.translation, *entity_a);
                 }
                 (Ok((_, trans)), Err(_), Err(_), Ok(web_segment)) => {
-                    handle_spring_break(&mut web, web_segment, trans.translation);
+                    handle_spring_break(&mut web, web_segment, trans.translation, *entity_a);
                 }
                 (Err(_), Ok((_, trans)), Ok(web_segment), Err(_)) => {
-                    handle_spring_break(&mut web, web_segment, trans.translation);
+                    handle_spring_break(&mut web, web_segment, trans.translation, *entity_b);
                 }
                 (Err(_), Ok((_, trans)), Err(_), Ok(web_segment)) => {
-                    handle_spring_break(&mut web, web_segment, trans.translation);
+                    handle_spring_break(&mut web, web_segment, trans.translation, *entity_b);
                 }
                 _ => {}
             }

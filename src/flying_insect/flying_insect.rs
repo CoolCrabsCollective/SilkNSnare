@@ -48,10 +48,7 @@ impl Plugin for FlyingInsectPlugin {
             fly_hentai_anime_setup.run_if(in_state(GameState::Game)),
         );
         app.insert_resource(FruitFlySpawnTimer {
-            timer: Timer::new(
-                Duration::from_millis(if DAVID_DEBUG { 3000 } else { 500 }),
-                TimerMode::Repeating,
-            ),
+            timer: Timer::new(Duration::from_millis(2000), TimerMode::Repeating),
         });
 
         app.insert_resource(EnsnareRollModel {
