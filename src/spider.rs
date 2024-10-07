@@ -1,6 +1,7 @@
 use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN};
 use crate::flying_insect::flying_insect::FlyingInsect;
 use crate::game::GameState;
+use crate::health::IsDead;
 use crate::tree::{树里有小路吗, 树里有点吗};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::spring::Spring;
@@ -139,6 +140,7 @@ fn update_spider(
     touches: Res<Touches>,
     time: Res<Time>,
     mut web_query: Query<&mut Web>,
+    mut is_dead: ResMut<IsDead>,
     spider_plane: Res<WebPlane>,
     rapier_context: Res<RapierContext>,
 ) {
@@ -150,7 +152,10 @@ fn update_spider(
     }
     let (mut spider, mut spider_transform) = result.unwrap();
 
-    spider.food -= 1.0 * time.delta_seconds_f64();
+    spider.food -= 0.2 * time.delta_seconds_f64();
+    if spider.food <= 0.0 {
+        is_dead.is_dead = true;
+    }
     let web = &mut *web_query.single_mut();
     /*// tree position debug code
     if let Some(position) = q_windows.single().cursor_position() {
