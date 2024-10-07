@@ -1,7 +1,9 @@
 use crate::flying_insect::flying_insect::FlyingInsectPlugin;
 use crate::game::GamePlugin;
+use crate::health::HealthPlugin;
 use crate::mesh_loader::MeshLoaderPlugin;
 use crate::spider::SpiderPlugin;
+use crate::title_screen::TitleScreenPlugin;
 use bevy::app::{App, PluginGroup};
 use bevy::prelude::*;
 use bevy::render::render_resource::{AddressMode, FilterMode};
@@ -21,7 +23,9 @@ mod tree;
 mod web;
 
 mod flying_insect;
+mod health;
 mod skybox;
+mod title_screen;
 mod flying_obstacle;
 
 fn main() {
@@ -60,12 +64,14 @@ fn main() {
         );
     }
 
+    app.add_plugins(TitleScreenPlugin);
     app.add_plugins(GamePlugin);
     app.add_plugins(MeshLoaderPlugin);
     app.add_plugins(TreePlugin);
     app.add_plugins(PumpkinPlugin);
     app.add_plugins(SpiderPlugin);
     app.add_plugins(FlyingInsectPlugin);
+    app.add_plugins(HealthPlugin);
     app.add_plugins(FlyingObstaclePlugin);
 
     app.run();

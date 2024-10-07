@@ -1,6 +1,8 @@
 use std::f32::consts::PI;
 
 use crate::config::COLLISION_GROUP_TERRAIN;
+use crate::flying_insect::fruit_fly::DAVID_DEBUG;
+use crate::game::GameState;
 use crate::{
     game::get_initial_camera_transform,
     mesh_loader::{self, load_level, MeshLoader},
@@ -15,10 +17,15 @@ const TREE_LIMIT: f32 = 0.75;
 const MAP_LIMIT: Vec3 = Vec3::new(1.8, 1.0, 0.0);
 const ADD_DEBUG_PLANE: bool = false;
 
+#[derive(Component)]
+pub struct GameStart {
+    pub game_start: f32,
+}
+
 impl Plugin for TreePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_tree.after(mesh_loader::setup));
-        app.add_systems(Update, move_to_tree);
+        app.add_systems(Update, move_to_tree.run_if(in_state(GameState::Game)));
     }
 }
 
@@ -61,32 +68,35 @@ fn move_to_tree(
     time: Res<Time>,
     mut swap_camera_angle: Local<bool>,
     keys: Res<ButtonInput<KeyCode>>,
+    start_query: Query<&GameStart>,
 ) {
-    let s = (time.elapsed_seconds() / 2.0).min(1.0);
-    let t = 3.0 * s * s - 2.0 * s * s * s;
+    if let Ok(start) = start_query.get_single() {
+        let s = ((time.elapsed_seconds() - start.game_start) / 2.0).min(1.0);
+        let t = 3.0 * s * s - 2.0 * s * s * s;
 
-    if keys.just_released(KeyCode::KeyQ) {
-        *swap_camera_angle = !*swap_camera_angle;
-    }
+        if keys.just_released(KeyCode::KeyQ) && DAVID_DEBUG {
+            *swap_camera_angle = !*swap_camera_angle;
+        }
 
-    let target_camera_pos = if *swap_camera_angle {
-        get_target_camera_position_2()
-    } else {
-        get_target_camera_position()
-    };
+        let target_camera_pos = if *swap_camera_angle {
+            get_target_camera_position_2()
+        } else {
+            get_target_camera_position()
+        };
 
-    let target_camera_rot = if *swap_camera_angle {
-        get_target_camera_direction_2()
-    } else {
-        get_target_camera_direction()
-    };
+        let target_camera_rot = if *swap_camera_angle {
+            get_target_camera_direction_2()
+        } else {
+            get_target_camera_direction()
+        };
 
-    if let Ok((mut camera_transform, _)) = camera_transform_query.get_single_mut() {
-        camera_transform.translation =
-            ((1.0 - t) * get_initial_camera_transform().translation) + t * target_camera_pos;
-        camera_transform.rotation = get_initial_camera_transform()
-            .rotation
-            .lerp(target_camera_rot, t)
+        if let Ok((mut camera_transform, _)) = camera_transform_query.get_single_mut() {
+            camera_transform.translation =
+                ((1.0 - t) * get_initial_camera_transform().translation) + t * target_camera_pos;
+            camera_transform.rotation = get_initial_camera_transform()
+                .rotation
+                .lerp(target_camera_rot, t)
+        }
     }
 }
 
@@ -177,7 +187,7 @@ pub fn get_target_camera_position() -> Vec3 {
 }
 
 pub fn get_target_camera_position_2() -> Vec3 {
-    Vec3::new(-27.94596, 10.068317, -112.5712)
+    Vec3::new(-5.0, 0.5, 0.25)
 }
 
 pub fn get_target_camera_direction() -> Quat {
@@ -185,7 +195,7 @@ pub fn get_target_camera_direction() -> Quat {
 }
 
 pub fn get_target_camera_direction_2() -> Quat {
-    Quat::from_axis_angle(Vec3::Y, -PI / 6.0)
+    Quat::from_axis_angle(Vec3::Y, -PI / 2.0)
 }
 
 pub fn get_arena_center() -> Vec3 {

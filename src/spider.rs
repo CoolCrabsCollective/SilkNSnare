@@ -1,11 +1,13 @@
 use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN};
 use crate::flying_insect::flying_insect::FlyingInsect;
+use crate::game::GameState;
 use crate::tree::{树里有小路吗, 树里有点吗};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
 use bevy::ecs::observer::TriggerTargets;
 use bevy::ecs::query::QueryEntityError;
+use bevy::input::touch::TouchPhase;
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier3d::na::ComplexField;
 use bevy_rapier3d::pipeline::CollisionEvent;
@@ -33,13 +35,13 @@ pub struct SnareTimer {
 }
 
 #[derive(Component)]
-struct Spider {
-    food: f64,
-    max_food: f64,
-    current_position: SpiderPosition,
-    current_rotation: f32,
-    target_position: SpiderPosition,
-    snaring_insect: Option<Entity>,
+pub struct Spider {
+    pub food: f64,
+    pub max_food: f64,
+    pub current_position: SpiderPosition,
+    pub current_rotation: f32,
+    pub target_position: SpiderPosition,
+    pub snaring_insect: Option<Entity>,
 }
 
 #[derive(Copy, Clone)]
@@ -115,8 +117,11 @@ impl Spider {
 impl Plugin for SpiderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_spider);
-        app.add_systems(Update, update_spider);
-        app.add_systems(Update, handle_ensnared_insect_collision);
+        app.add_systems(Update, update_spider.run_if(in_state(GameState::Game)));
+        app.add_systems(
+            Update,
+            handle_ensnared_insect_collision.run_if(in_state(GameState::Game)),
+        );
         app.insert_resource(WebPlane {
             plane: Vec4::new(0.0, 0.0, -1.0, 0.0),
             left: Vec3::new(0.0, 1.0, 0.0),
@@ -131,6 +136,7 @@ fn update_spider(
     q_windows: Query<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
+    touches: Res<Touches>,
     time: Res<Time>,
     mut web_query: Query<&mut Web>,
     spider_plane: Res<WebPlane>,
@@ -143,6 +149,8 @@ fn update_spider(
         return;
     }
     let (mut spider, mut spider_transform) = result.unwrap();
+
+    spider.food -= 1.0 * time.delta_seconds_f64();
     let web = &mut *web_query.single_mut();
     /*// tree position debug code
     if let Some(position) = q_windows.single().cursor_position() {
@@ -160,8 +168,14 @@ fn update_spider(
             }
         }
     }*/
-    if buttons.just_pressed(MouseButton::Left) {
-        if let Some(position) = q_windows.single().cursor_position() {
+    if buttons.just_pressed(MouseButton::Left) || touches.any_just_pressed() {
+        let touch = touches.iter_just_pressed().next();
+        let mut touch_pos = None;
+        if touch.is_some() {
+            touch_pos = Some(touch.unwrap().position())
+        }
+
+        if let Some(position) = touch_pos.or(q_windows.single().cursor_position()) {
             let (camera, camera_global_transform) = camera_query.single();
 
             if let Some(ray) = camera.viewport_to_world(&camera_global_transform, position) {
