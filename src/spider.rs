@@ -1,6 +1,7 @@
 use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN};
 use crate::flying_insect::flying_insect::FlyingInsect;
 use crate::game::GameState;
+use crate::health::IsDead;
 use crate::tree::{树里有小路吗, 树里有点吗};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::spring::Spring;
@@ -30,10 +31,13 @@ struct WebPlane {
     left: Vec3,
 }
 
+#[derive(Event)]
+pub struct SpiderFeastEvent(pub f32);
+
 #[derive(Component)]
 pub struct Spider {
-    pub food: f64,
-    pub max_food: f64,
+    pub food: f32,
+    pub max_food: f32,
     pub current_position: SpiderPosition,
     pub current_rotation: f32,
     pub target_position: SpiderPosition,
@@ -98,7 +102,7 @@ impl SpiderPosition {
 }
 
 impl Spider {
-    pub fn new(max_food: f64, pos: Vec3) -> Self {
+    pub fn new(max_food: f32, pos: Vec3) -> Self {
         Spider {
             food: max_food,
             max_food,
@@ -133,6 +137,7 @@ fn update_spider(
     touches: Res<Touches>,
     time: Res<Time>,
     mut web_query: Query<&mut Web>,
+    mut is_dead: ResMut<IsDead>,
     spider_plane: Res<WebPlane>,
     rapier_context: Res<RapierContext>,
 ) {
@@ -144,7 +149,10 @@ fn update_spider(
     }
     let (mut spider, mut spider_transform) = result.unwrap();
 
-    spider.food -= 1.0 * time.delta_seconds_f64();
+    spider.food -= 0.2 * time.delta_seconds();
+    if spider.food <= 0.0 {
+        is_dead.is_dead = true;
+    }
     let web = &mut *web_query.single_mut();
     /*// tree position debug code
     if let Some(position) = q_windows.single().cursor_position() {
@@ -225,6 +233,7 @@ fn handle_ensnared_insect_collision(
     mut spider_query: Query<(&mut Spider, Entity)>,
     mut insects_query: Query<(&mut FlyingInsect), With<Ensnared>>,
     mut collision_events: EventReader<CollisionEvent>,
+    mut ev_feast: EventWriter<SpiderFeastEvent>,
     time: Res<Time>,
 ) {
     let result = spider_query.get_single_mut();
@@ -249,6 +258,7 @@ fn handle_ensnared_insect_collision(
             if insect.snare_roll_progress >= 1.0 && insect.cooking_progress >= 1.0 {
                 // TIME TO EAT!!!!!!
                 insect.snare_roll_progress = 0.0; // TODO: why do we need this?
+                ev_feast.send(SpiderFeastEvent(3.0));
                 commands
                     .entity(insect.rolled_ensnare_entity.unwrap())
                     .despawn();

@@ -3,6 +3,7 @@ use std::f32::consts::PI;
 use crate::config::COLLISION_GROUP_TERRAIN;
 use crate::flying_insect::fruit_fly::DAVID_DEBUG;
 use crate::game::GameState;
+use crate::health::IsDead;
 use crate::{
     game::get_initial_camera_transform,
     mesh_loader::{self, load_level, MeshLoader},
@@ -69,6 +70,7 @@ fn move_to_tree(
     mut swap_camera_angle: Local<bool>,
     keys: Res<ButtonInput<KeyCode>>,
     start_query: Query<&GameStart>,
+    is_dead: Res<IsDead>,
 ) {
     if let Ok(start) = start_query.get_single() {
         let s = ((time.elapsed_seconds() - start.game_start) / 2.0).min(1.0);
@@ -90,12 +92,15 @@ fn move_to_tree(
             get_target_camera_direction()
         };
 
-        if let Ok((mut camera_transform, _)) = camera_transform_query.get_single_mut() {
-            camera_transform.translation =
-                ((1.0 - t) * get_initial_camera_transform().translation) + t * target_camera_pos;
-            camera_transform.rotation = get_initial_camera_transform()
-                .rotation
-                .lerp(target_camera_rot, t)
+        if !is_dead.is_dead {
+            if let Ok((mut camera_transform, _)) = camera_transform_query.get_single_mut() {
+                camera_transform.translation = ((1.0 - t)
+                    * get_initial_camera_transform().translation)
+                    + t * target_camera_pos;
+                camera_transform.rotation = get_initial_camera_transform()
+                    .rotation
+                    .lerp(target_camera_rot, t)
+            }
         }
     }
 }
@@ -192,6 +197,19 @@ pub fn get_target_camera_position_2() -> Vec3 {
 
 pub fn get_target_camera_direction() -> Quat {
     Quat::from_axis_angle(Vec3::Y, 0.0)
+}
+
+pub fn get_death_target_position() -> Vec3 {
+    Vec3::new(-3.23464, -0.87868, -11.8736)
+}
+
+pub fn get_death_target_rotation() -> Quat {
+    Quat::from_euler(
+        EulerRot::YXZ,
+        174.122f32.to_radians(),
+        -30.20693f32.to_radians(),
+        0.0,
+    )
 }
 
 pub fn get_target_camera_direction_2() -> Quat {
