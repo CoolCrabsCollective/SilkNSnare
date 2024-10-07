@@ -1,4 +1,4 @@
-use super::fruit_fly::DAVID_DEBUG;
+use super::fruit_fly::{spawn_fruit_fly, DAVID_DEBUG};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::Web;
 use bevy::app::{App, Plugin, Startup, Update};
@@ -7,8 +7,8 @@ use bevy::color::Color;
 use bevy::math::{Mat3, Vec3};
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::{
-    default, Commands, Component, Entity, Mesh, Meshable, PbrBundle, Quat, Query, Res,
-    ResMut, Resource, Sphere, Time, Timer, TimerMode, Transform, With, Without,
+    default, Commands, Component, Entity, Mesh, Meshable, PbrBundle, Quat, Query, Res, ResMut,
+    Resource, Sphere, Time, Timer, TimerMode, Transform, With, Without,
 };
 use rand::Rng;
 use std::f32::consts::PI;
@@ -31,7 +31,7 @@ impl Plugin for FlyingInsectPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, generate_ensnare_roll_model);
         app.add_systems(Update, move_flying_insect);
-        //app.add_systems(Update, spawn_fruit_fly);
+        app.add_systems(Update, spawn_fruit_fly);
         app.add_systems(Update, insect_ensnared_tick_cooking_and_free);
         app.add_systems(Update, update_ensnare_roll_model);
         app.insert_resource(FruitFlySpawnTimer {
