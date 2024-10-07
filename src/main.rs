@@ -1,5 +1,6 @@
 use crate::flying_insect::flying_insect::FlyingInsectPlugin;
 use crate::game::GamePlugin;
+use crate::health::HealthPlugin;
 use crate::mesh_loader::MeshLoaderPlugin;
 use crate::spider::SpiderPlugin;
 use bevy::app::{App, PluginGroup};
@@ -20,6 +21,7 @@ mod tree;
 mod web;
 
 mod flying_insect;
+mod health;
 mod skybox;
 
 fn main() {
@@ -64,6 +66,7 @@ fn main() {
     app.add_plugins(PumpkinPlugin);
     app.add_plugins(SpiderPlugin);
     app.add_plugins(FlyingInsectPlugin);
+    app.add_plugins(HealthPlugin);
 
     app.run();
 }
