@@ -254,16 +254,16 @@ fn handle_ensnared_insect_collision(
                 error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
                 return;
             };
-            if insect.ensnared_and_rolled & insect.cooked {
+            if insect.ensnare_roll_progress >= 1.0 && insect.cooking_progress >= 1.0 {
                 // TIME TO EAT!!!!!!
-                insect.ensnared_and_rolled = false;
+                insect.ensnare_roll_progress = 0.0; // TODO: why do we need this?
                 commands
                     .entity(insect.rolled_ensnare_entity.unwrap())
                     .despawn();
 
                 free_enemy_from_web(commands, entity, &mut *web_query.single_mut());
                 commands.entity(entity).despawn();
-            } else if !insect.ensnared_and_rolled {
+            } else if insect.ensnare_roll_progress == 0.0 {
                 s.snaring_insect = Some(entity); // only start rolling
                 insect.freed_timer.pause();
             }
@@ -370,13 +370,17 @@ fn handle_ensnared_insect_collision(
         }
         ss_snare_timer.timer.tick(time.delta());
 
+        if let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) {
+            insect.ensnare_roll_progress +=
+                time.delta_seconds() / ss_snare_timer.timer.duration().as_secs_f32();
+        }
+
         if ss_snare_timer.timer.just_finished() {
             ss_snare_timer.timer.reset();
             ss_snare_timer.timer.pause();
 
             // Mark insect as rolled, wait on timeout before allowing to eat
             if let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) {
-                insect.ensnared_and_rolled = true;
                 let mut web = web_query.single_mut();
                 for spring in &mut web.springs {
                     for ensnared in &mut spring.ensnared_entities {
