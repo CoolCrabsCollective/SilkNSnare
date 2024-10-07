@@ -10,6 +10,7 @@ use bevy_rapier3d::plugin::RapierContext;
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 use std::f32::consts::PI;
 use std::time::Duration;
+use bevy::ecs::query::QueryEntityError;
 
 pub const NNN: bool = false; // currently october, set this to true in november
 pub const SPIDER_ROTATE_SPEED: f32 = 5.6;
@@ -207,7 +208,7 @@ fn handle_ensnared_insect_collision(
             commands.entity(insect.rolled_ensnare_entity.unwrap()).despawn();
             free_enemy_from_web(commands, entity, web_query);
             commands.entity(entity).despawn();
-        } else {
+        } else if !insect.ensnared_and_rolled {
             s.snaring_insect = Some(entity); // only start rolling
             insect.freed_timer.pause();
         }
@@ -295,11 +296,17 @@ fn handle_ensnared_insect_collision(
             ss_snare_timer.timer.pause();
 
             // Mark insect as rolled, wait on timeout before allowing to eat
-            let mut insect = insects_query
-                .get_mut(spider.snaring_insect.unwrap())
-                .expect("FUCK NO ENSNARED BUG");
-            insect.ensnared_and_rolled = true;
-            spider.snaring_insect = None;
+            if let Ok(mut insect) = insects_query
+                .get_mut(spider.snaring_insect.unwrap()) {
+                insect.ensnared_and_rolled = true;
+                spider.snaring_insect = None;
+            };
+        }
+        if spider.snaring_insect != None {
+            match insects_query.get_mut(spider.snaring_insect.unwrap()) {
+                Ok(_) => {}
+                Err(_) => {spider.snaring_insect = None}
+            };
         }
     }
 }
