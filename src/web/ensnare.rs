@@ -265,15 +265,17 @@ pub fn split_ensnared_entities_for_spring_split(
     old_spring: &Spring,
     split_position: Vec3,
 ) -> (Vec<EnsnaredEntity>, Vec<EnsnaredEntity>) {
-    let new_particle_t = EnsnaredEntity::snare_position_from_world_space(
+    let mut new_particle_t = EnsnaredEntity::snare_position_from_world_space(
         split_position,
         web.particles[old_spring.first_index].position,
         web.particles[old_spring.second_index].position,
-    )
-    .clamp(0.0, 1.0);
+    );
 
-    error!("不好 particle t");
-    //assert!(new_particle_t >= 0.0 && new_particle_t <= 1.0);
+    if new_particle_t >= 0.0 && new_particle_t <= 1.0 {
+        error!("new_particle_t={new_particle_t}");
+    }
+
+    new_particle_t = new_particle_t.clamp(0.0, 1.0);
 
     let new_spring_1_ensnared_entities = old_spring
         .ensnared_entities

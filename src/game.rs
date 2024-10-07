@@ -171,8 +171,8 @@ fn setup(
     commands.spawn((SceneBundle {
         scene: asset_server.load("outdoor_scene.glb#Scene0"),
         transform: Transform {
-            translation: Vec3::new(-4.0, -2.0, -10.0),
-            rotation: Quat::from_rotation_y(PI),
+            translation: Vec3::new(0.0, 0.0, 0.0),
+            rotation: Quat::from_rotation_y(0.0),
             scale: Vec3::ONE,
         },
         global_transform: Default::default(),
