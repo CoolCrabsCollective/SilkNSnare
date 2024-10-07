@@ -13,6 +13,7 @@ use tree::TreePlugin;
 mod config;
 mod game;
 mod mesh_loader;
+mod pumpkin;
 mod spider;
 mod tree;
 mod web;
