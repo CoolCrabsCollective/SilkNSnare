@@ -13,6 +13,7 @@ bevy_mod_raycast = "0.18.0"
 queues = "1.0.2"
 tokio = "1.40.0"
 noise = "0.9.0"
+bevy_health_bar3d = "3.3.0"
 
 [profile.dev]
 opt-level = 1

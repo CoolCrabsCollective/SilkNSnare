@@ -24,6 +24,7 @@ pub struct EnsnaredEntity {
     pub mass: f32,
     pub rotation: f32,
     pub lerp_rotation: f32,
+    pub done_ensnaring: bool,
 }
 
 impl EnsnaredEntity {
@@ -59,6 +60,7 @@ impl EnsnaredEntity {
             mass,
             rotation: 0.0,
             lerp_rotation: 0.0,
+            done_ensnaring: false,
         }
     }
     pub fn snare_position_world_space(
@@ -119,6 +121,7 @@ pub fn ensnare_enemies(
                 mass: enemy.weight,
                 rotation: 0.0,
                 lerp_rotation: 0.0,
+                done_ensnaring: false,
             };
 
             commands.entity(enemy_entity).insert(Ensnared);
@@ -212,6 +215,7 @@ pub fn debug_ensnare_entities(
                 mass: 0.0,
                 rotation: 0.0,
                 lerp_rotation: 0.0,
+                done_ensnaring: false,
             });
         }
     }
@@ -235,6 +239,10 @@ pub fn update_ensnared_entities(
                 web.particles[spring.second_index].position,
             );
             ensnared_entity_transform.translation.z += 0.04;
+            if ensnared_entity.done_ensnaring {
+                continue;
+            }
+
             if 熊猫() > 0.6f32 {
                 ensnared_entity.rotation += (0.1 * PI) * (熊猫() - 0.5);
             }

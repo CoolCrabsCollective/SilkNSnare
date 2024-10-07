@@ -375,6 +375,16 @@ fn handle_ensnared_insect_collision(
         if insect.snare_timer.just_finished() {
             insect.snare_timer.reset();
             insect.snare_timer.pause();
+
+            let mut web = web_query.single_mut();
+            for spring in &mut web.springs {
+                for ensnared in &mut spring.ensnared_entities {
+                    if ensnared.entity.eq(&spider.snaring_insect.unwrap()) {
+                        ensnared.done_ensnaring = true;
+                        break;
+                    }
+                }
+            }
             spider.snaring_insect = None;
         }
         if spider.snaring_insect != None {
