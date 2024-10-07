@@ -124,7 +124,7 @@ fn process_loaded_gltfs(
                             transform: transform
                                 .with_translation(transform.translation + Vec3::new(0.0, 5.0, 0.0)),
                             point_light: PointLight {
-                                intensity: 500_000.0,
+                                intensity: 100_000.0,
                                 color: ORANGE_LIGHT_COLOR,
                                 shadows_enabled: true,
                                 radius: 1.0,
