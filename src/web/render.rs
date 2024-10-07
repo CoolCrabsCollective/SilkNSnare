@@ -74,7 +74,7 @@ pub fn render_web(
 
     let material_handle: Handle<StandardMaterial> = materials.add(StandardMaterial {
         base_color: Color::srgb(0.8, 0.8, 0.8),
-        unlit: true,
+        // unlit: true,
         ..default()
     });
 

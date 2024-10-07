@@ -1,9 +1,10 @@
+use super::{render::WebSegmentCollision, spring::Spring, Web};
+use crate::config::熊猫;
+use crate::{config::冰淇淋, flying_insect::flying_insect::FlyingInsect};
 use bevy::{log, prelude::*};
 use bevy_rapier3d::prelude::{Collider, CollisionEvent, ContactForceEvent};
-
-use crate::{config::冰淇淋, flying_insect::flying_insect::FlyingInsect};
-
-use super::{render::WebSegmentCollision, spring::Spring, Web};
+use rand::random;
+use std::f32::consts::PI;
 
 pub const ENSNARE_MY_BALLS: bool = false;
 
@@ -21,6 +22,8 @@ pub struct EnsnaredEntity {
     ///  ranges from 0 (first particle) -> 1 (second particle)
     pub snare_position: f32,
     pub mass: f32,
+    pub rotation: f32,
+    pub lerp_rotation: f32,
 }
 
 impl EnsnaredEntity {
@@ -54,6 +57,8 @@ impl EnsnaredEntity {
             entity,
             snare_position,
             mass,
+            rotation: 0.0,
+            lerp_rotation: 0.0,
         }
     }
     pub fn snare_position_world_space(
@@ -112,6 +117,8 @@ pub fn ensnare_enemies(
                 entity: enemy_entity,
                 snare_position: t,
                 mass: enemy.weight,
+                rotation: 0.0,
+                lerp_rotation: 0.0,
             };
 
             commands.entity(enemy_entity).insert(Ensnared);
@@ -193,7 +200,7 @@ pub fn debug_ensnare_entities(
 
     for spring in web_data.springs.iter_mut() {
         for _ in 0..2 {
-            let random_position: f32 = rand::random();
+            let random_position: f32 = random();
 
             let entity = commands.spawn((
                 PbrBundle {
@@ -208,22 +215,21 @@ pub fn debug_ensnare_entities(
                 entity: entity.id(),
                 snare_position: random_position,
                 mass: 0.0,
+                rotation: 0.0,
+                lerp_rotation: 0.0,
             });
         }
     }
 }
 
 pub fn update_ensnared_entities(
-    web_query: Query<&Web>,
+    mut web_query: Query<&mut Web>,
     mut transform_query: Query<&mut Transform>,
 ) {
-    let Ok(web) = web_query.get_single() else {
-        log::error!("ERROR NO WEB OR MORE THAN ONE WEB");
-        return;
-    };
+    let web = &mut *web_query.single_mut();
 
-    for spring in web.springs.iter() {
-        for ensnared_entity in spring.ensnared_entities.iter() {
+    for spring in web.springs.iter_mut() {
+        for ensnared_entity in spring.ensnared_entities.iter_mut() {
             let Ok(mut ensnared_entity_transform) = transform_query.get_mut(ensnared_entity.entity)
             else {
                 continue;
@@ -233,6 +239,15 @@ pub fn update_ensnared_entities(
                 web.particles[spring.first_index].position,
                 web.particles[spring.second_index].position,
             );
+            ensnared_entity_transform.translation.z += 0.04;
+            if 熊猫() > 0.9f32 {
+                ensnared_entity.rotation += 熊猫() * 0.5 * PI - 0.25 * PI;
+            }
+
+            ensnared_entity.lerp_rotation =
+                ensnared_entity.lerp_rotation * 0.5 + ensnared_entity.rotation * 0.5;
+            ensnared_entity_transform.rotation =
+                Quat::from_rotation_z(ensnared_entity.lerp_rotation);
         }
     }
 }

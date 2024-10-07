@@ -1,9 +1,12 @@
 use crate::skybox::{Cubemap, CUBEMAPS};
 use crate::web::WebSimulationPlugin;
 use bevy::asset::LoadState;
+use bevy::audio::PlaybackMode::Loop;
+use bevy::audio::Volume;
 use bevy::color::palettes::basic::RED;
 use bevy::color::palettes::css::ORANGE_RED;
 use bevy::core_pipeline::Skybox;
+use bevy::math::VectorSpace;
 use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLightShadowMap};
 use bevy::prelude::Projection::Perspective;
 use bevy::prelude::*;
@@ -41,25 +44,29 @@ fn setup(
     mut _materials: ResMut<Assets<StandardMaterial>>,
 ) {
     //load_level("map.glb#Scene0", &mut commands, &asset_server);
-    /*
+
     commands.spawn(AudioBundle {
-        source: asset_server.load("song.ogg"),
+        source: asset_server.load("web_pressure.ogg"),
         settings: PlaybackSettings {
             mode: Loop,
-            volume: Relative(VolumeLevel::new(0.1f32)),
+            volume: Volume::new(1.0f32),
             ..default()
         },
         ..default()
-    });*/
+    });
 
+    // old orange
     let orange_light_color = Color::srgb(0.97, 0.75, 0.6);
+
+    // new light violet
+    let light_color = Color::srgb(0.79, 0.76, 1.0);
 
     commands.insert_resource(AmbientLight {
         // color: Color::WHITE,
         // color: Color::srgb(1.0, 0.6, 0.0),
         // color: Color::srgb(1.0, 0.77, 0.59),
-        color: orange_light_color,
-        brightness: 100.0,
+        color: light_color,
+        brightness: 200.0,
     });
 
     commands.spawn(PointLightBundle {
@@ -67,7 +74,7 @@ fn setup(
         transform: Transform::from_xyz(-2.0, 1.0, 3.0),
         point_light: PointLight {
             intensity: 100_000.0,
-            color: orange_light_color,
+            color: light_color,
             shadows_enabled: true,
             ..default()
         },
@@ -75,27 +82,45 @@ fn setup(
     });
 
     // directional 'sun' light
+    // commands.spawn(DirectionalLightBundle {
+    //     directional_light: DirectionalLight {
+    //         illuminance: 2000.0,
+    //         shadows_enabled: true,
+    //         color: light_color,
+    //         ..default()
+    //     },
+    //     transform: Transform::from_translation(Vec3::new(-3.0, 3.0, -10.0))
+    //         .looking_at(Vec3::ZERO, Vec3::Z),
+    //     // The default cascade config is designed to handle large scenes.
+    //     // As this example has a much smaller world, we can tighten the shadow
+    //     // bounds for better visual quality.
+    //     // cascade_shadow_config: CascadeShadowConfigBuilder {
+    //     //     first_cascade_far_bound: 4.0,
+    //     //     maximum_distance: 10.0,
+    //     //     ..default()
+    //     // }
+    //     // .into(),
+    //     ..default()
+    // });
+
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
-            illuminance: light_consts::lux::FULL_MOON_NIGHT,
+            illuminance: 2000.0,
             shadows_enabled: true,
-            color: orange_light_color,
+            color: light_color,
             ..default()
         },
-        transform: Transform {
-            translation: Vec3::new(0.0, 2.0, 0.0),
-            rotation: Quat::from_rotation_x(-PI / 4.),
-            ..default()
-        },
+        transform: Transform::from_translation(Vec3::new(0.0, 3.0, -10.0))
+            .looking_at(Vec3::ZERO, Vec3::Z),
         // The default cascade config is designed to handle large scenes.
         // As this example has a much smaller world, we can tighten the shadow
         // bounds for better visual quality.
-        cascade_shadow_config: CascadeShadowConfigBuilder {
-            first_cascade_far_bound: 4.0,
-            maximum_distance: 10.0,
-            ..default()
-        }
-        .into(),
+        // cascade_shadow_config: CascadeShadowConfigBuilder {
+        //     first_cascade_far_bound: 4.0,
+        //     maximum_distance: 10.0,
+        //     ..default()
+        // }
+        // .into(),
         ..default()
     });
 
@@ -109,7 +134,7 @@ fn setup(
             },
             transform: get_initial_camera_transform(),
             projection: Perspective(PerspectiveProjection {
-                fov: 60.0f32.to_radians(),
+                fov: 55.0f32.to_radians(),
                 ..default()
             }),
 
@@ -118,6 +143,22 @@ fn setup(
         Skybox {
             image: skybox_handle.clone(),
             brightness: 1000.0,
+        },
+        FogSettings {
+            color: Color::srgba(0.04, 0.04, 0.13, 0.6),
+            // color: Color::srgba(0.18, 0.31, 0.38, 0.4),
+            // color: Color::srgba(0.20, 0.14, 0.1, 0.7),
+            // color: Color::srgba(0.24, 0.1, 0.03, 0.7),
+            // color: orange_light_color,
+            // directional_light_color: orange_light_color,
+            // directional_light_exponent: 100.0,
+            // falloff: FogFalloff::from_visibility(500.0),
+            // falloff: FogFalloff::from_visibility_colors(
+            //     15.0, // distance in world units up to which objects retain visibility (>= 5% contrast)
+            //     Color::srgb(0.35, 0.5, 0.66), // atmospheric extinction color (after light is lost due to absorption by atmospheric particles)
+            //     Color::srgb(0.8, 0.844, 1.0), // atmospheric inscattering color (light gained due to scattering from the sun)
+            // ),
+            ..default()
         },
     ));
 
