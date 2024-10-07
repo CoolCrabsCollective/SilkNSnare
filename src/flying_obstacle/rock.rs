@@ -1,4 +1,4 @@
-use crate::config::COLLISION_GROUP_ENEMIES;
+use crate::config::{COLLISION_GROUP_ENEMIES, COLLISION_GROUP_WALLS};
 use crate::flying_obstacle::flying_obstacle::{rock_timer_value, FlyingObstacle, RockSpawnTimer};
 use crate::tree::GameStart;
 use bevy::asset::AssetServer;
@@ -70,7 +70,7 @@ pub fn spawn_rock(
                 .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC)
                 .insert(CollisionGroups {
                     memberships: COLLISION_GROUP_ENEMIES,
-                    filters: Group::ALL,
+                    filters: COLLISION_GROUP_WALLS,
                 });
         }
     }
