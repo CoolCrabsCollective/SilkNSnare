@@ -142,9 +142,9 @@ fn update_spider(
         println!("F U C K");
         return;
     }
-
     let (mut spider, mut spider_transform) = result.unwrap();
     let web = &mut *web_query.single_mut();
+    /*// tree position debug code
     if let Some(position) = q_windows.single().cursor_position() {
         let (camera, camera_global_transform) = camera_query.single();
 
@@ -159,7 +159,7 @@ fn update_spider(
                 println!("不树");
             }
         }
-    }
+    }*/
     if buttons.just_pressed(MouseButton::Left) {
         if let Some(position) = q_windows.single().cursor_position() {
             let (camera, camera_global_transform) = camera_query.single();
@@ -468,34 +468,20 @@ fn set_new_target(
             _ => -1.0,
         };
 
-        if t == 0.0 {
+        if t == 0.0
+            || web.particles[from_spring.first_index]
+                .position
+                .distance_squared(spider.current_position.to_vec3(web))
+                < 0.03 * 0.03
+        {
             from_particle_idx = Some(from_spring.first_index);
-        } else if t == 1.0 {
+        } else if t == 1.0
+            || web.particles[from_spring.second_index]
+                .position
+                .distance_squared(spider.current_position.to_vec3(web))
+                < 0.03 * 0.03
+        {
             from_particle_idx = Some(from_spring.second_index);
-        }
-    }
-
-    if let Some((spring_index, current_t)) = from_spring {
-        let spring: &Spring = &web.springs[spring_index];
-        let mut dir = web.particles[spring.second_index].position
-            - web.particles[spring.first_index].position;
-        let dir_len = dir.length();
-
-        dir = dir.normalize();
-        if dir.dot(target_dir) > 0.98 {
-            let delta_t = (target_δ.dot(dir).abs() / dir_len);
-            spider.target_position =
-                SpiderPosition::WEB(spring_index, (current_t + delta_t).clamp(0.0, 1.0));
-            println!("Moving along spring from particle location");
-            return;
-        }
-
-        if dir.dot(target_dir) < -0.98 {
-            let delta_t = (target_δ.dot(dir).abs() / dir_len);
-            spider.target_position =
-                SpiderPosition::WEB(spring_index, (current_t - delta_t).clamp(0.0, 1.0));
-            println!("Moving along spring from particle location");
-            return;
         }
     }
 
@@ -518,14 +504,40 @@ fn set_new_target(
 
                 dir = dir.normalize();
                 if dir.dot(target_dir) > 0.98 {
-                    let delta_t = (target_δ.dot(dir).abs() / dir_len).clamp(0.0, 1.0);
+                    let mut dest_t = (target_δ.dot(dir).abs() / dir_len).clamp(0.0, 1.0);
+                    if spring.second_index == from_particle_idx.unwrap() {
+                        dest_t = 1.0 - dest_t;
+                    }
+
                     spider.current_position = SpiderPosition::WEB(i, t);
-                    spider.target_position = SpiderPosition::WEB(i, 1.0 - delta_t);
+                    spider.target_position = SpiderPosition::WEB(i, dest_t);
 
                     println!("Moving along spring from particle location");
                     return;
                 }
             }
+        }
+    } else if let Some((spring_index, current_t)) = from_spring {
+        let spring: &Spring = &web.springs[spring_index];
+        let mut dir = web.particles[spring.second_index].position
+            - web.particles[spring.first_index].position;
+        let dir_len = dir.length();
+
+        dir = dir.normalize();
+        if dir.dot(target_dir) > 0.98 {
+            let delta_t = (target_δ.dot(dir).abs() / dir_len);
+            spider.target_position =
+                SpiderPosition::WEB(spring_index, (current_t + delta_t).clamp(0.0, 1.0));
+            println!("Moving along spring from middle of spring");
+            return;
+        }
+
+        if dir.dot(target_dir) < -0.98 {
+            let delta_t = (target_δ.dot(dir).abs() / dir_len);
+            spider.target_position =
+                SpiderPosition::WEB(spring_index, (current_t - delta_t).clamp(0.0, 1.0));
+            println!("Moving along spring from middle of spring");
+            return;
         }
     }
 
@@ -560,10 +572,23 @@ fn set_new_target(
         dest_spring_idx = Some(i);
     }
 
-    let existing_p1 = web.get_particle_index(position, 0.1);
-    let existing_p2 = web.get_particle_index(target_pos, 0.1);
+    let existing_p1 = web.get_particle_index(position, 0.03);
+    let existing_p2 = web.get_particle_index(target_pos, 0.03);
 
     if existing_p1 == existing_p2 && existing_p1.is_some() {
+        println!("Not initiating to move far enough to initiate movement");
+
+        if dest_spring_idx.is_some() {
+            let spring = &web.springs[dest_spring_idx.unwrap()];
+            spider.target_position = SpiderPosition::WEB(
+                dest_spring_idx.unwrap(),
+                if spring.first_index == existing_p2.unwrap() {
+                    0.0
+                } else {
+                    1.0
+                },
+            );
+        }
         return; // not initiating to move far enough to initiate movement
     }
 
@@ -614,7 +639,13 @@ fn set_new_target(
                 t = 1.0 - t;
             }
 
-            spider.current_position = SpiderPosition::WEB(spring_idx.unwrap(), 1.0 - t);
+            let t_start = if spring.first_index == existing_p1.unwrap() {
+                0.0
+            } else {
+                1.0
+            };
+
+            spider.current_position = SpiderPosition::WEB(spring_idx.unwrap(), t_start);
             spider.target_position = SpiderPosition::WEB(spring_idx.unwrap(), t);
             println!("Path is along existing spring");
             return;

@@ -24,12 +24,16 @@ impl Plugin for TreePlugin {
 
 fn spawn_tree(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mesh_loader: ResMut<MeshLoader>,
+    mut asset_server: ResMut<AssetServer>,
+    mut mesh_loader: ResMut<MeshLoader>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    load_level(String::from("tree.glb"), asset_server, mesh_loader);
+    load_level(
+        String::from("tree.glb"),
+        &mut asset_server,
+        &mut mesh_loader,
+    );
 
     if ADD_DEBUG_PLANE {
         let debug_plane = meshes.add(Plane3d {

@@ -171,8 +171,14 @@ fn setup(
 
     load_level(
         String::from("outdoor_scene.glb"),
-        asset_server.into(),
-        mesh_loader,
+        &mut asset_server,
+        &mut mesh_loader,
+    );
+
+    load_level(
+        String::from("logo.glb"),
+        &mut asset_server,
+        &mut mesh_loader,
     );
 
     // commands.spawn((SceneBundle {

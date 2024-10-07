@@ -8,6 +8,7 @@ use bevy::render::render_resource::{AddressMode, FilterMode};
 use bevy::render::texture::{ImageAddressMode, ImageFilterMode, ImageSamplerDescriptor};
 use bevy::render::RenderPlugin;
 use bevy::DefaultPlugins;
+use pumpkin::PumpkinPlugin;
 use tree::TreePlugin;
 
 mod config;
@@ -60,6 +61,7 @@ fn main() {
     app.add_plugins(GamePlugin);
     app.add_plugins(MeshLoaderPlugin);
     app.add_plugins(TreePlugin);
+    app.add_plugins(PumpkinPlugin);
     app.add_plugins(SpiderPlugin);
     app.add_plugins(FlyingInsectPlugin);
 
