@@ -1,12 +1,13 @@
 use std::f32::consts::PI;
 
+use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_TERRAIN};
 use crate::{
     game::get_initial_camera_transform,
     mesh_loader::{self, load_level, MeshLoader},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContext;
-use bevy_rapier3d::prelude::QueryFilter;
+use bevy_rapier3d::prelude::{CollisionGroups, QueryFilter};
 
 pub struct TreePlugin;
 
@@ -85,17 +86,39 @@ fn move_to_tree(
     }
 }
 
-pub fn 树里有点吗(点: Vec3, rapier_context: &Res<RapierContext>) -> bool {
+pub fn 树里有点吗(
+    点: Vec3,
+    rapier_context: &Res<RapierContext>,
+    照相机: &Camera,
+    照相机的global_transform: &GlobalTransform,
+) -> bool {
     if !照相机里有点吗(点) {
         return false;
     }
 
+    let viewport_coord = 照相机.world_to_viewport(&照相机的global_transform, 点);
+
+    if viewport_coord.is_none() {
+        return false;
+    }
+
+    let optional_ray = 照相机.viewport_to_world(&照相机的global_transform, viewport_coord.unwrap());
+
+    if optional_ray.is_none() {
+        return false;
+    }
+
+    let ray = optional_ray.unwrap();
+
     let told_me = rapier_context.cast_ray(
-        点 + Vec3::new(0.0, 0.0, 1.0),
-        Vec3::new(0.0, 0.0, -1.0),
-        2.0,
+        ray.origin,
+        ray.direction.as_vec3(),
+        10.0,
         true,
-        QueryFilter::default(),
+        QueryFilter::new().groups(CollisionGroups {
+            memberships: COLLISION_GROUP_ALL,
+            filters: COLLISION_GROUP_TERRAIN,
+        }),
     );
 
     if let Some((body, once)) = told_me {
@@ -104,15 +127,28 @@ pub fn 树里有点吗(点: Vec3, rapier_context: &Res<RapierContext>) -> bool {
     false
 }
 
-pub fn 树里有小路吗(开始: Vec3, 结尾: Vec3, rapier_context: &Res<RapierContext>) -> bool {
-    if !树里有点吗(开始, rapier_context) || !树里有点吗(结尾, rapier_context) {
+pub fn 树里有小路吗(
+    开始: Vec3,
+    结尾: Vec3,
+    rapier_context: &Res<RapierContext>,
+    照相机: &Camera,
+    照相机的global_transform: &GlobalTransform,
+) -> bool {
+    if !树里有点吗(开始, rapier_context, 照相机, 照相机的global_transform)
+        || !树里有点吗(结尾, rapier_context, 照相机, 照相机的global_transform)
+    {
         return false;
     }
 
     // 如果不好提高这号码
     for i in 1..10 {
         let t = i as f32 / 10.0;
-        if !树里有点吗(开始 * t + 结尾 * (1.0 - t), rapier_context) {
+        if !树里有点吗(
+            开始 * t + 结尾 * (1.0 - t),
+            rapier_context,
+            照相机,
+            照相机的global_transform,
+        ) {
             return false;
         }
     }
@@ -131,7 +167,7 @@ pub fn get_target_camera_position() -> Vec3 {
 }
 
 pub fn get_target_camera_position_2() -> Vec3 {
-    Vec3::new(-3.0, 0.5, 3.75)
+    Vec3::new(-27.94596, 10.068317, -112.5712)
 }
 
 pub fn get_target_camera_direction() -> Quat {
