@@ -63,7 +63,8 @@ pub fn spawn_rock(
                         inherited_visibility: Default::default(),
                         view_visibility: Default::default(),
                     },
-                    Collider::capsule_y(1.0, 1.0),
+                    // Collider::capsule_y(1.0, 1.0),
+                    Collider::ball(0.75),
                 ))
                 .insert(ActiveEvents::COLLISION_EVENTS)
                 .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC)
