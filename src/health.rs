@@ -1,10 +1,12 @@
-use crate::spider::Spider;
+use crate::spider::{Spider, SpiderFeastEvent};
 use crate::tree::{
     get_death_target_position, get_death_target_rotation, get_target_camera_direction,
     get_target_camera_position,
 };
 use bevy::app::{App, Plugin, Update};
-use bevy::prelude::{Camera, Component, Query, Res, ResMut, Resource, Style, Time, Without};
+use bevy::prelude::{
+    Camera, Component, EventReader, Query, Res, ResMut, Resource, Style, Time, Without,
+};
 use bevy::ui::Val;
 
 pub struct HealthPlugin;
@@ -12,6 +14,8 @@ impl Plugin for HealthPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, update_health);
         app.add_systems(Update, update_death_screen);
+        app.add_systems(Update, feast_on_bugs);
+        app.add_event::<SpiderFeastEvent>();
         app.insert_resource(IsDead {
             is_dead: false,
             death_camera_progress: 0.0,
@@ -43,7 +47,6 @@ fn update_death_screen(
     mut camera_transform_query: Query<(&mut bevy::prelude::Transform, &Camera)>,
     time: Res<Time>,
 ) {
-    println!("{:?}: ", is_dead.is_dead);
     if is_dead.is_dead {
         println!("{:?}: ", is_dead.death_camera_progress);
         if is_dead.death_camera_progress < 1.0 {
@@ -58,5 +61,17 @@ fn update_death_screen(
                 is_dead.death_camera_progress += 0.5 * time.delta_seconds();
             }
         }
+    }
+}
+
+fn feast_on_bugs(
+    mut ev_feast: EventReader<SpiderFeastEvent>,
+    mut spider_query: Query<(&mut Spider)>,
+) {
+    let mut spider = spider_query.single_mut();
+    for ev in ev_feast.read() {
+        let food = ev.0;
+        println!("Feast!!");
+        spider.food = spider.max_food.min(spider.food + food);
     }
 }
