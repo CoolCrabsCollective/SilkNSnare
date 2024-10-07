@@ -89,6 +89,7 @@ fn process_loaded_gltfs(
                                         filters: COLLISION_GROUP_PLAYER,
                                     }
                                 } else if name.to_lowercase().contains("terrain") {
+                                    println!("{}", name.to_lowercase());
                                     CollisionGroups {
                                         memberships: COLLISION_GROUP_TERRAIN,
                                         filters: COLLISION_GROUP_PLAYER | COLLISION_GROUP_ENEMIES,
