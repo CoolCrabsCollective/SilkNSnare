@@ -14,6 +14,7 @@ use crate::config::{
 };
 use crate::game::ORANGE_LIGHT_COLOR;
 use crate::pumpkin::Pumpkin;
+use crate::tree::get_target_camera_position;
 
 pub struct MeshLoaderPlugin;
 
@@ -115,19 +116,20 @@ fn process_loaded_gltfs(
 
             if name.to_lowercase().contains("pumpkin") {
                 if let Some(transform) = nodes.get(node_handle).map(|node| node.transform) {
-                    log::warn!(
-                        "Spawning point light at {:?}",
-                        transform.translation + Vec3::new(0.0, 5.0, 0.0)
-                    );
                     commands.spawn((
                         PointLightBundle {
-                            transform: transform
-                                .with_translation(transform.translation + Vec3::new(0.0, 5.0, 0.0)),
+                            transform: transform.with_translation(
+                                transform.translation
+                                    + Vec3::new(0.0, 1.0, 0.0)
+                                    + 2.5
+                                        * (get_target_camera_position() - transform.translation)
+                                            .normalize(),
+                            ),
                             point_light: PointLight {
-                                intensity: 100_000.0,
+                                intensity: 0.0,
                                 color: ORANGE_LIGHT_COLOR,
                                 shadows_enabled: true,
-                                radius: 1.0,
+                                radius: 0.5,
                                 ..default()
                             },
                             ..default()

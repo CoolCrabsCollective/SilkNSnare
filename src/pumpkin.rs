@@ -9,6 +9,8 @@ impl Plugin for PumpkinPlugin {
     }
 }
 
+pub const PUMPKIN_LIGHT_INTENSITY: f32 = 250_000.0;
+
 #[derive(Component)]
 pub struct Pumpkin;
 
@@ -20,8 +22,9 @@ pub fn update_pumpkin_glow(
         let get_noise = |t| Perlin::new(i as u32).get([t]) as f32 * 0.5 + 0.5;
 
         let slow_noise = get_noise(0.5 * time.elapsed_seconds_f64());
-        let fast_noise = get_noise(4.0 * time.elapsed_seconds_f64());
+        let fast_noise = get_noise(3.0 * time.elapsed_seconds_f64());
 
-        pumpkin_light.intensity = 250_000.0 + 500_000.0 * slow_noise + 200_000.0 * fast_noise;
+        pumpkin_light.intensity =
+            PUMPKIN_LIGHT_INTENSITY * (0.333 + 0.6777 * slow_noise + 0.3333 * fast_noise);
     }
 }
