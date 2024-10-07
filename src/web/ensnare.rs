@@ -159,13 +159,24 @@ pub fn ensnare_enemies(
     }
 }
 
-pub fn free_enemy_from_web(mut commands: &mut Commands, entity: Entity, web: &mut Web) {
-    commands.entity(entity).remove::<Ensnared>();
-    commands.entity(entity).insert(Freed);
+pub fn free_enemy_from_web(
+    mut commands: &mut Commands,
+    insect_entity: Entity,
+    insect: Option<&FlyingInsect>,
+    web: &mut Web,
+) {
+    commands.entity(insect_entity).remove::<Ensnared>();
+    commands.entity(insect_entity).insert(Freed);
+
+    if let Some(insect) = insect {
+        if let Some(rolled_ensnare_entity) = insect.rolled_ensnare_entity {
+            commands.entity(rolled_ensnare_entity).despawn();
+        }
+    }
 
     for mut spring in &mut web.springs {
         for i in 0..spring.ensnared_entities.len() {
-            if spring.ensnared_entities.get(i).unwrap().entity == entity {
+            if spring.ensnared_entities.get(i).unwrap().entity == insect_entity {
                 spring.ensnared_entities.swap_remove(i);
                 // TODO: add force upon freeing of insect
                 break;

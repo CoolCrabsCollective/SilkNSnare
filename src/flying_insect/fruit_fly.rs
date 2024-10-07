@@ -1,5 +1,8 @@
 use crate::config::COLLISION_GROUP_ENEMIES;
-use crate::flying_insect::flying_insect::{BezierCurve, FlyingInsect, FruitFlySpawnTimer};
+use crate::flying_insect::flying_insect::{
+    fly_timer_value, BezierCurve, FlyingInsect, FruitFlySpawnTimer,
+};
+use crate::tree::GameStart;
 use crate::ui::progress_bar::CookingInsect;
 use bevy::prelude::*;
 use bevy_health_bar3d::configuration::BarHeight;
@@ -7,6 +10,7 @@ use bevy_health_bar3d::prelude::BarSettings;
 use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 use rand::Rng;
+use std::time::Duration;
 
 pub const DAVID_DEBUG: bool = false;
 
@@ -26,9 +30,17 @@ pub fn spawn_fruit_fly(
     mut ff_spawn_timer: ResMut<FruitFlySpawnTimer>,
     mut graphs: ResMut<Assets<AnimationGraph>>,
     mut animation_res: ResMut<Animation>,
+    start_query: Query<&GameStart>,
 ) {
     ff_spawn_timer.timer.tick(time.delta());
     if ff_spawn_timer.timer.just_finished() {
+        let game_start = start_query.single();
+        ff_spawn_timer.timer = Timer::new(
+            Duration::from_secs_f32(fly_timer_value(
+                time.elapsed_seconds() - game_start.game_start,
+            )),
+            TimerMode::Repeating,
+        );
         let mut rng = rand::thread_rng();
         let x_begin = rng.gen_range(-4.0..0.0);
         let x_end = rng.gen_range(-3.0..-1.0);

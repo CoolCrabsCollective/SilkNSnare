@@ -7,6 +7,7 @@ use crate::spider::SpiderPlugin;
 use crate::title_screen::TitleScreenPlugin;
 use crate::ui::progress_bar::ProgressBarPlugin;
 use bevy::app::{App, PluginGroup};
+use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use bevy::render::render_resource::{AddressMode, FilterMode};
 use bevy::render::texture::{ImageAddressMode, ImageFilterMode, ImageSamplerDescriptor};
@@ -51,6 +52,10 @@ fn main() {
                         title: "Silk & Snare".to_string(),
                         ..default()
                     }),
+                    ..default()
+                })
+                .set(AssetPlugin {
+                    meta_check: AssetMetaCheck::Never,
                     ..default()
                 })
                 .set(ImagePlugin { default_sampler }),

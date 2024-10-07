@@ -45,6 +45,9 @@ pub struct Spider {
     pub current_rotation: f32,
     pub target_position: SpiderPosition,
     pub touching_insects: Vec<Entity>,
+
+    pub current_roll: f32,
+    pub lerp_roll: f32,
 }
 
 #[derive(Copy, Clone)]
@@ -113,6 +116,8 @@ impl Spider {
             current_position: SpiderPosition::TREE(pos),
             current_rotation: 0.0,
             touching_insects: vec![],
+            current_roll: 0.0,
+            lerp_roll: 0.0,
         }
     }
 }
@@ -133,7 +138,9 @@ impl Plugin for SpiderPlugin {
 }
 fn update_spider(
     mut commands: Commands,
-    mut spider_query: Query<(&mut Spider, &mut Transform)>,
+    mut spider_query: Query<(&mut Spider, &mut Transform), Without<Ensnared>>,
+    insect_query: Query<&FlyingInsect>,
+    mut flies: Query<(&FlyingInsect, &Transform), With<Ensnared>>,
     q_windows: Query<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
@@ -209,15 +216,40 @@ fn update_spider(
                 let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                 let p = ray.origin + ray.direction * λ;
 
-                web.破壊する(p, &mut commands);
+                web.破壊する(p, &insect_query, &mut commands);
             }
         }
     }
 
     move_spider(web, &mut *spider, &time);
     rotate_spider(web, &mut *spider, &time);
+
+    if spider.current_position.is_tree() {
+        spider.current_roll = 0.0;
+    } else {
+        let mut has_insect_close = false;
+        if let SpiderPosition::WEB(idx, t) = spider.current_position {
+            let spring = &web.springs[idx];
+            for (fly, trans) in flies.iter() {
+                if (trans.translation - spider.current_position.to_vec3(web)).length_squared()
+                    < 0.1 * 0.1
+                {
+                    has_insect_close = true;
+                }
+            }
+        }
+
+        let rem = spider.current_roll % (2.0 * PI);
+        if (has_insect_close && (rem.abs() < 0.1 || rem > 2.0 * PI - 0.1))
+            || (!has_insect_close && (rem - PI).abs() < 0.1)
+        {
+            spider.current_roll += PI;
+        }
+    }
+
     spider_transform.translation = spider.current_position.to_vec3(web);
-    spider_transform.translation.z += 0.05;
+    spider_transform.translation.z += 0.05 * spider.lerp_roll.cos();
+    spider.lerp_roll = spider.lerp_roll * 0.5 + spider.current_roll * 0.5;
 
     let spider_plane_up = spider_plane.plane.xyz().cross(spider_plane.left);
     let base_transform_mat = Mat3::from_cols(
@@ -227,7 +259,8 @@ fn update_spider(
     );
     spider_transform.rotation =
         Quat::from_axis_angle(-spider_plane.plane.xyz(), spider.current_rotation)
-            * Quat::from_mat3(&base_transform_mat);
+            * Quat::from_mat3(&base_transform_mat)
+            * Quat::from_axis_angle(Vec3::new(1f32, 0f32, 0f32), spider.lerp_roll);
 }
 
 fn handle_ensnared_insect_collision(
@@ -396,6 +429,7 @@ fn handle_ensnared_insect_collision(
             free_enemy_from_web(
                 &mut commands,
                 *snaring_insect_entity,
+                Some(&insect),
                 &mut *web_query.single_mut(),
             );
             commands
@@ -780,10 +814,9 @@ fn set_new_target(
                 pinned: true,
             });
         } else {
-            // HORRIBLE HACK
-            // basically this means that dest_spring_idx got invalidated in the
-            // above call to split_spring due to a swap_remove call that happens inside it
-            // so we detect this side effect and correct the index
+            // 可怕的黑客
+            // 基本上这意味着 dest_spring_idx 在上述对 split_spring 的调用中由于其内部发生的 swap_remove
+            // 调用而失效，因此我们检测到此副作用并更正索引
             if hack_swap_removed_a_spring && dest_spring_idx.unwrap() == hack_spring_count - 1 {
                 dest_spring_idx = Some(from_spring.unwrap().0);
             }
