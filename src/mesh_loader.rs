@@ -80,7 +80,7 @@ fn process_loaded_gltfs(
                     get_material_from_gltf_node(node_handle, &gltf_meshes, &nodes),
                     nodes.get(node_handle).map(|node| node.transform),
                 ) {
-                    ensnare_roll_model.material = material;
+                    ensnare_roll_model.material = materials.get(&material).unwrap().clone();
                     ensnare_roll_model.transform = transform;
                     ensnare_roll_model.mesh = meshes.add(mesh);
                     should_spawn = false;

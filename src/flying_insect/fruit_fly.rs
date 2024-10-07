@@ -1,6 +1,9 @@
 use crate::config::COLLISION_GROUP_ENEMIES;
 use crate::flying_insect::flying_insect::{BezierCurve, FlyingInsect, FruitFlySpawnTimer};
+use crate::ui::progress_bar::CookingInsect;
 use bevy::prelude::*;
+use bevy_health_bar3d::configuration::BarHeight;
+use bevy_health_bar3d::prelude::BarSettings;
 use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 use rand::Rng;
@@ -22,7 +25,7 @@ pub fn spawn_fruit_fly(
     time: Res<Time>,
     mut ff_spawn_timer: ResMut<FruitFlySpawnTimer>,
     mut graphs: ResMut<Assets<AnimationGraph>>,
-    mut animation_res: ResMut<Animation>
+    mut animation_res: ResMut<Animation>,
 ) {
     ff_spawn_timer.timer.tick(time.delta());
     if ff_spawn_timer.timer.just_finished() {
@@ -44,8 +47,8 @@ pub fn spawn_fruit_fly(
                     GltfAssetLabel::Animation(0).from_asset("fruit_fly.glb"),
                     GltfAssetLabel::Animation(1).from_asset("fruit_fly.glb"),
                 ]
-                    .into_iter()
-                    .map(|path| asset_server.load(path)),
+                .into_iter()
+                .map(|path| asset_server.load(path)),
                 1.0,
                 graph.root,
             )
@@ -85,6 +88,12 @@ pub fn spawn_fruit_fly(
                     view_visibility: Default::default(),
                 },
                 Collider::capsule_y(1.0, 1.0),
+                BarSettings::<CookingInsect> {
+                    offset: 1.0,
+                    width: 3.0,
+                    height: BarHeight::Static(0.5),
+                    ..default()
+                },
             ))
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC)
@@ -104,7 +113,8 @@ pub fn fly_hentai_anime_setup(
         player.play(animations.animation_list[0]).repeat();
         player.play(animations.animation_list[1]).repeat();
 
-        commands.entity(entity)
+        commands
+            .entity(entity)
             .insert(animations.graph.clone())
             .insert(player.clone());
     }

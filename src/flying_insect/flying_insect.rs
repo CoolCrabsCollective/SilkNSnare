@@ -10,6 +10,7 @@ use bevy::color::Color;
 use bevy::math::{Mat3, Vec3};
 use bevy::pbr::StandardMaterial;
 use bevy::{log, prelude::*};
+use bevy_health_bar3d::prelude::Percentage;
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
@@ -24,7 +25,7 @@ pub struct FruitFlySpawnTimer {
 #[derive(Resource)]
 pub struct EnsnareRollModel {
     pub mesh: Handle<Mesh>,
-    pub material: Handle<StandardMaterial>,
+    pub material: StandardMaterial,
     pub transform: Transform,
 }
 
@@ -64,6 +65,7 @@ impl Plugin for FlyingInsectPlugin {
     }
 }
 
+#[derive(Reflect)]
 pub struct BezierCurve {
     p0: Vec3,
     p1: Vec3,
@@ -128,7 +130,7 @@ fn generate_bezier_handles(p0: Vec3, p3: Vec3) -> (Vec3, Vec3) {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct FlyingInsect {
     pub speed: f32,
     pub progress: f32,
@@ -136,8 +138,9 @@ pub struct FlyingInsect {
     pub offset: f32,
     pub path: BezierCurve,
     pub break_free_position: Vec3,
-    pub ensnared_and_rolled: bool,
-    pub cooked: bool,
+    pub snare_roll_progress: f32,
+    pub snare_timer: Timer,
+    pub cooking_progress: f32,
     pub cooking_timer: Timer,
     pub freed_timer: Timer,
     pub rolled_ensnare_entity: Option<Entity>,
@@ -153,8 +156,9 @@ impl FlyingInsect {
             offset: rng.gen_range(0.0..2.0 * PI),
             path: bezier,
             break_free_position: Vec3::new(0.0, 0.0, 0.0),
-            ensnared_and_rolled: false,
-            cooked: false,
+            snare_roll_progress: 0.0,
+            cooking_progress: 0.0,
+            snare_timer: Timer::new(Duration::from_secs(2), TimerMode::Repeating),
             cooking_timer: Timer::new(Duration::from_secs(5), TimerMode::Repeating),
             freed_timer: Timer::new(Duration::from_secs(15), TimerMode::Repeating),
             rolled_ensnare_entity: None,
@@ -218,7 +222,7 @@ fn insect_ensnared_tick_cooking_and_free(
         }
 
         insect.freed_timer.tick(time.delta());
-        if insect.freed_timer.just_finished() {
+        if insect.freed_timer.just_finished() && insect.snare_roll_progress < 1.0 {
             free_enemy_from_web(&mut commands, entity, &mut *web_query.single_mut());
             if insect.rolled_ensnare_entity != None {
                 commands
@@ -232,18 +236,21 @@ fn insect_ensnared_tick_cooking_and_free(
             insect.freed_timer.pause();
             insect.freed_timer.reset();
 
-            insect.cooked = false;
+            insect.cooking_progress = 0.0;
         }
 
-        if insect.ensnared_and_rolled {
+        if insect.snare_roll_progress >= 1.0 {
             if insect.cooking_timer.paused() {
                 insect.cooking_timer.unpause();
                 insect.freed_timer.reset();
             }
 
             insect.cooking_timer.tick(time.delta());
+
+            insect.cooking_progress +=
+                time.delta_seconds() / insect.cooking_timer.duration().as_secs_f32();
+
             if insect.cooking_timer.just_finished() {
-                insect.cooked = true;
                 insect.cooking_timer.reset();
                 insect.cooking_timer.pause();
 
@@ -266,23 +273,27 @@ fn load_ensnare_roll_model(
 fn update_ensnare_roll_model(
     mut commands: Commands,
     mut ensnare_roll_model: ResMut<EnsnareRollModel>,
-    mut insects_query: Query<(&mut FlyingInsect, &Transform), With<Ensnared>>,
+    mut material_query: Query<&mut Handle<StandardMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut insects_query: Query<(&mut FlyingInsect, &Transform, Entity), With<Ensnared>>,
     mut transform_query: Query<&mut Transform, Without<Ensnared>>,
 ) {
-    for (mut insect, insect_trans) in insects_query.iter_mut() {
-        if insect.ensnared_and_rolled {
+    for (mut insect, insect_trans, insect_entity) in insects_query.iter_mut() {
+        if insect.snare_roll_progress > 0.0 {
             if insect.rolled_ensnare_entity == None {
-                log::warn!(
-                    "adding cocoon mesh: {:?}, {:?}",
-                    ensnare_roll_model.mesh.clone(),
-                    insect_trans.scale
-                );
+                // log::warn!(
+                //     "adding cocoon mesh: {:?}, {:?}",
+                //     ensnare_roll_model.mesh.clone(),
+                //     insect_trans.scale
+                // );
+                materials.add(ensnare_roll_model.material.clone());
                 let entity = commands.spawn(
                     (PbrBundle {
                         mesh: ensnare_roll_model.mesh.clone(),
-                        material: ensnare_roll_model.material.clone(),
-                        transform: insect_trans
-                            .with_scale(insect_trans.scale.x * ensnare_roll_model.transform.scale),
+                        material: materials.add(ensnare_roll_model.material.clone()),
+                        transform: insect_trans.with_scale(
+                            1.5 * insect_trans.scale.x * ensnare_roll_model.transform.scale,
+                        ),
                         ..default()
                     }),
                 );
@@ -290,6 +301,24 @@ fn update_ensnare_roll_model(
                 insect.rolled_ensnare_entity = Some(entity.id());
                 return;
             }
+
+            if let Ok(material_handle) = material_query.get(insect.rolled_ensnare_entity.unwrap()) {
+                if let Some(material) = materials.get_mut(material_handle) {
+                    // log::warn!(
+                    //     "{:?}: snare_roll_progress={:?}, cooking_progress={:?}",
+                    //     insect_entity,
+                    //     insect.snare_roll_progress,
+                    //     insect.cooking_progress
+                    // );
+                    let cook_t = (1.0 - insect.cooking_progress).clamp(0.0, 1.0);
+                    material.base_color =
+                        Color::srgba(1.0, cook_t, cook_t, insect.snare_roll_progress);
+                } else {
+                    log::error!("no mat 2");
+                }
+            } else {
+                log::error!("no mat");
+            };
 
             // Move ensnared roll model with insect
             let Ok(mut ensnared_trans) =
