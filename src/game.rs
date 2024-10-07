@@ -53,14 +53,18 @@ fn setup(
         ..default()
     });*/
 
-    let orange_light_color = Color::srgb(0.97, 0.75, 0.6);
+    // old orange
+    // let light_color = Color::srgb(0.97, 0.75, 0.6);
+
+    // new light violet
+    let light_color = Color::srgb(0.79, 0.76, 1.0);
 
     commands.insert_resource(AmbientLight {
         // color: Color::WHITE,
         // color: Color::srgb(1.0, 0.6, 0.0),
         // color: Color::srgb(1.0, 0.77, 0.59),
-        color: orange_light_color,
-        brightness: 100.0,
+        color: light_color,
+        brightness: 200.0,
     });
 
     commands.spawn(PointLightBundle {
@@ -68,7 +72,7 @@ fn setup(
         transform: Transform::from_xyz(-2.0, 1.0, 3.0),
         point_light: PointLight {
             intensity: 100_000.0,
-            color: orange_light_color,
+            color: light_color,
             shadows_enabled: true,
             ..default()
         },
@@ -80,7 +84,7 @@ fn setup(
         directional_light: DirectionalLight {
             illuminance: 2000.0,
             shadows_enabled: true,
-            color: orange_light_color,
+            color: light_color,
             ..default()
         },
         transform: Transform::from_translation(Vec3::new(0.0, 3.0, -10.0))
