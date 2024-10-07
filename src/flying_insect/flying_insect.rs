@@ -1,5 +1,6 @@
 use super::fruit_fly::DAVID_DEBUG;
 use crate::flying_insect::fruit_fly::{fly_hentai_anime_setup, spawn_fruit_fly, Animation};
+use crate::flying_obstacle::flying_obstacle::{ROCK_TIMER_MULTIPLIER, ROCK_TIMER_START};
 use crate::game::GameState;
 use crate::mesh_loader::{self, load_level, MeshLoader};
 use crate::spider::Spider;
@@ -17,6 +18,11 @@ use std::f32::consts::PI;
 use std::time::Duration;
 
 pub struct FlyingInsectPlugin;
+pub const FLY_TIMER_START: f32 = 1500.0;
+pub const FLY_TIMER_MULT: f32 = 500.0;
+pub(crate) fn fly_timer_value(t: f32) -> f32 {
+    (FLY_TIMER_START + (ROCK_TIMER_MULTIPLIER * t.sqrt())) / 1000.0
+}
 
 #[derive(Resource)]
 pub struct FruitFlySpawnTimer {
@@ -48,7 +54,10 @@ impl Plugin for FlyingInsectPlugin {
             fly_hentai_anime_setup.run_if(in_state(GameState::Game)),
         );
         app.insert_resource(FruitFlySpawnTimer {
-            timer: Timer::new(Duration::from_millis(2000), TimerMode::Repeating),
+            timer: Timer::new(
+                Duration::from_secs_f32(fly_timer_value(0.0)),
+                TimerMode::Repeating,
+            ),
         });
 
         app.insert_resource(EnsnareRollModel {

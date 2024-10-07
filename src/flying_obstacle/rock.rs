@@ -1,9 +1,10 @@
 use crate::config::COLLISION_GROUP_ENEMIES;
-use crate::flying_obstacle::flying_obstacle::{FlyingObstacle, RockSpawnTimer};
+use crate::flying_obstacle::flying_obstacle::{rock_timer_value, FlyingObstacle, RockSpawnTimer};
+use crate::tree::GameStart;
 use bevy::asset::AssetServer;
 use bevy::math::{Quat, Vec3};
 use bevy::prelude::{
-    Commands, Component, Res, ResMut, SceneBundle, Time, Timer, TimerMode, Transform,
+    Commands, Component, Query, Res, ResMut, SceneBundle, Time, Timer, TimerMode, Transform,
 };
 use bevy_rapier3d::geometry::{ActiveEvents, Group};
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, Collider, CollisionGroups};
@@ -18,12 +19,14 @@ pub fn spawn_rock(
     asset_server: ResMut<AssetServer>,
     time: Res<Time>,
     mut r_spawn_timer: ResMut<RockSpawnTimer>,
+    start_query: Query<&GameStart>,
 ) {
     r_spawn_timer.timer.tick(time.delta());
     if r_spawn_timer.timer.just_finished() {
-        let next_rock_time = Duration::from_secs_f32(
-            crate::flying_obstacle::flying_obstacle::rock_timer_value(time.elapsed_seconds()),
-        );
+        let game_start = start_query.single();
+        let next_rock_time = Duration::from_secs_f32(rock_timer_value(
+            time.elapsed_seconds() - game_start.game_start,
+        ));
         println!(
             "Throwing a rock, resetting timer to {:?}",
             next_rock_time.as_secs_f32()
