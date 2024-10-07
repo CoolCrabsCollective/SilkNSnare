@@ -56,7 +56,7 @@ fn setup(
     });
 
     // old orange
-    // let light_color = Color::srgb(0.97, 0.75, 0.6);
+    let orange_light_color = Color::srgb(0.97, 0.75, 0.6);
 
     // new light violet
     let light_color = Color::srgb(0.79, 0.76, 1.0);
@@ -82,6 +82,27 @@ fn setup(
     });
 
     // directional 'sun' light
+    // commands.spawn(DirectionalLightBundle {
+    //     directional_light: DirectionalLight {
+    //         illuminance: 2000.0,
+    //         shadows_enabled: true,
+    //         color: light_color,
+    //         ..default()
+    //     },
+    //     transform: Transform::from_translation(Vec3::new(-3.0, 3.0, -10.0))
+    //         .looking_at(Vec3::ZERO, Vec3::Z),
+    //     // The default cascade config is designed to handle large scenes.
+    //     // As this example has a much smaller world, we can tighten the shadow
+    //     // bounds for better visual quality.
+    //     // cascade_shadow_config: CascadeShadowConfigBuilder {
+    //     //     first_cascade_far_bound: 4.0,
+    //     //     maximum_distance: 10.0,
+    //     //     ..default()
+    //     // }
+    //     // .into(),
+    //     ..default()
+    // });
+
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             illuminance: 2000.0,
