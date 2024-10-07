@@ -222,7 +222,7 @@ fn insect_ensnared_tick_cooking_and_free(
         }
 
         insect.freed_timer.tick(time.delta());
-        if insect.freed_timer.just_finished() {
+        if insect.freed_timer.just_finished() && insect.snare_roll_progress < 1.0 {
             free_enemy_from_web(&mut commands, entity, &mut *web_query.single_mut());
             if insect.rolled_ensnare_entity != None {
                 commands
@@ -291,7 +291,6 @@ fn update_ensnare_roll_model(
                         mesh: ensnare_roll_model.mesh.clone(),
                         material: ensnare_roll_model.material.clone(),
                         transform: insect_trans.with_scale(
-                            // TODO: is 1.2 enough?
                             1.5 * insect_trans.scale.x * ensnare_roll_model.transform.scale,
                         ),
                         ..default()
