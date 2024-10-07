@@ -9,6 +9,9 @@ use bevy::prelude::*;
 use ensnare::{debug_ensnare_entities, ensnare_enemies, update_ensnared_entities};
 use render::{clear_web, render_web};
 use std::f32::consts::PI;
+use bevy_rapier3d::pipeline::CollisionEvent;
+use crate::flying_obstacle::flying_obstacle::FlyingObstacle;
+use crate::web::render::WebSegmentCollision;
 
 pub const START_WITH_A_WEB: bool = false; // FOR NOOBS
 
@@ -188,6 +191,8 @@ impl Plugin for WebSimulationPlugin {
         app.add_systems(Startup, debug_ensnare_entities.after(spawn_simulation));
         app.add_systems(Update, ensnare_enemies);
         app.add_systems(Update, update_ensnared_entities);
+
+        app.add_systems(Update, handle_obstacles_destroy_web);
     }
 }
 
@@ -379,5 +384,58 @@ pub fn step(web: &mut Web, air_damping: f32, h: f32) {
 
         particle.velocity += particle.force / particle.mass * h;
         particle.position += particle.velocity * h;
+    }
+}
+
+fn handle_obstacles_destroy_web(
+    mut commands: Commands,
+    mut web_query: Query<&mut Web>,
+    mut collision_events: EventReader<CollisionEvent>,
+    web_segment_collisions_query: Query<&WebSegmentCollision>,
+    mut obstacle_query: Query<(&mut FlyingObstacle, &mut Transform)>
+) {
+    let Ok(mut web) = web_query.get_single_mut() else {
+        panic!("FUCK NO WEB");
+    };
+
+    let mut handle_spring_break = |
+                web: &mut Web,
+                web_segment: &WebSegmentCollision,
+                obstacle_trans: Vec3| {
+        let spring = web.springs.get(web_segment.spring_index).unwrap();
+        let first_particle_position = web.particles.get(spring.first_index).unwrap().position;
+        let second_particle_position = web.particles.get(spring.second_index).unwrap().position;
+
+        let obstacle_position_t = (obstacle_trans - first_particle_position)
+            .dot(second_particle_position - first_particle_position)
+            / (second_particle_position - first_particle_position)
+            .dot(second_particle_position - first_particle_position);
+        let obstacle_position = obstacle_position_t * second_particle_position + first_particle_position;
+        web.破壊する(obstacle_position, &mut commands);
+    };
+
+    for collision_event in collision_events.read() {
+        if let CollisionEvent::Started(entity_a, entity_b, _) = collision_event {
+            match (
+                obstacle_query.get(*entity_a),
+                obstacle_query.get(*entity_b),
+                web_segment_collisions_query.get(*entity_a),
+                web_segment_collisions_query.get(*entity_b),
+            ) {
+                (Ok((_, trans)), Err(_), Ok(web_segment), Err(_)) => {
+                    handle_spring_break(&mut web, web_segment, trans.translation);
+                }
+                (Ok((_, trans)), Err(_), Err(_), Ok(web_segment)) => {
+                    handle_spring_break(&mut web, web_segment, trans.translation);
+                }
+                (Err(_), Ok((_, trans)), Ok(web_segment), Err(_)) => {
+                    handle_spring_break(&mut web, web_segment, trans.translation);
+                }
+                (Err(_), Ok((_, trans)), Err(_), Ok(web_segment)) => {
+                    handle_spring_break(&mut web, web_segment, trans.translation);
+                }
+                _ => {}
+            }
+        }
     }
 }
