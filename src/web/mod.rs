@@ -2,16 +2,18 @@ pub mod ensnare;
 mod render;
 pub mod spring;
 
+use crate::flying_insect::flying_insect::FlyingInsect;
+use crate::flying_obstacle::flying_obstacle::FlyingObstacle;
 use crate::tree::get_arena_center;
 use crate::web::ensnare::{free_enemy_from_web, split_ensnared_entities_for_spring_split};
+use crate::web::render::WebSegmentCollision;
 use crate::web::spring::Spring;
 use bevy::prelude::*;
+use bevy_rapier3d::pipeline::CollisionEvent;
+use bevy_rapier3d::prelude::Collider;
 use ensnare::{debug_ensnare_entities, ensnare_enemies, update_ensnared_entities};
 use render::{clear_web, render_web};
 use std::f32::consts::PI;
-use bevy_rapier3d::pipeline::CollisionEvent;
-use crate::flying_obstacle::flying_obstacle::{FlyingObstacle};
-use crate::web::render::WebSegmentCollision;
 
 pub const START_WITH_A_WEB: bool = false; // FOR NOOBS
 
@@ -38,7 +40,12 @@ pub struct Web {
 }
 
 impl Web {
-    pub fn 破壊する(&mut self, ポイント: Vec3, commands: &mut Commands) {
+    pub fn 破壊する(
+        &mut self,
+        ポイント: Vec3,
+        insect_query: &Query<&FlyingInsect>,
+        commands: &mut Commands,
+    ) {
         let カウント = self.springs.len();
         for インデックス in 0..カウント {
             let 粒子1 = self.particles[self.springs[インデックス].first_index].position;
@@ -54,7 +61,12 @@ impl Web {
             let あるバネのパラメーター = (ポイント - 粒子1).length() / (粒子2 - 粒子1).length();
             while self.springs[インデックス].ensnared_entities.len() > 0 {
                 let 罠にかかった = &self.springs[インデックス].ensnared_entities[0];
-                free_enemy_from_web(commands, 罠にかかった.entity, self);
+                free_enemy_from_web(
+                    commands,
+                    罠にかかった.entity,
+                    insect_query.get(罠にかかった.entity).ok(),
+                    self,
+                );
             }
 
             let あるバネのポイント =
@@ -393,45 +405,44 @@ pub fn step(web: &mut Web, air_damping: f32, h: f32) {
 fn handle_obstacles_destroy_web(
     mut commands: Commands,
     mut web_query: Query<&mut Web>,
+    insect_query: Query<&FlyingInsect>,
     mut collision_events: EventReader<CollisionEvent>,
     web_segment_collisions_query: Query<&WebSegmentCollision>,
-    mut obstacle_query: Query<(&mut FlyingObstacle, &mut Transform), Without<Breaker>>
+    mut obstacle_query: Query<(&mut FlyingObstacle, &mut Transform), Without<Breaker>>,
 ) {
     let Ok(mut web) = web_query.get_single_mut() else {
         panic!("FUCK NO WEB");
     };
 
-    let mut handle_spring_break = |
-                web: &mut Web,
-                web_segment: &WebSegmentCollision,
-                obstacle_trans: Vec3,
-                entity: Entity| {
-        let spring = web.springs.get(web_segment.spring_index).unwrap();
-        let first_particle_position = web.particles.get(spring.first_index).unwrap().position;
-        let second_particle_position = web.particles.get(spring.second_index).unwrap().position;
+    let mut handle_spring_break =
+        |web: &mut Web, web_segment: &WebSegmentCollision, obstacle_trans: Vec3, entity: Entity| {
+            let spring = web.springs.get(web_segment.spring_index).unwrap();
+            let first_particle_position = web.particles.get(spring.first_index).unwrap().position;
+            let second_particle_position = web.particles.get(spring.second_index).unwrap().position;
 
-        let obstacle_position_t = (obstacle_trans - first_particle_position)
-            .dot(second_particle_position - first_particle_position)
-            / (second_particle_position - first_particle_position)
-            .dot(second_particle_position - first_particle_position);
+            let obstacle_position_t = (obstacle_trans - first_particle_position)
+                .dot(second_particle_position - first_particle_position)
+                / (second_particle_position - first_particle_position)
+                    .dot(second_particle_position - first_particle_position);
 
-        if obstacle_position_t < -0.1 || obstacle_position_t > 1.1 {
-            error!(
+            if obstacle_position_t < -0.1 || obstacle_position_t > 1.1 {
+                error!(
                     "不冰淇淋, \
             first_particle_position={first_particle_position}, \
             second_particle_position={second_particle_position}, \
             obstacle_trans={obstacle_trans}, \
             obstacle_position_t={obstacle_position_t}"
                 );
-        }
+            }
 
-        let t = obstacle_position_t.clamp(0.0, 1.0);
+            let t = obstacle_position_t.clamp(0.0, 1.0);
 
-        let obstacle_position = ((1.0 - t) * first_particle_position)
-                            + (t * second_particle_position);
-        web.破壊する(obstacle_position, &mut commands);
-        commands.entity(entity).insert(Breaker);
-    };
+            let obstacle_position =
+                ((1.0 - t) * first_particle_position) + (t * second_particle_position);
+            web.破壊する(obstacle_position, &insect_query, &mut commands);
+            commands.entity(entity).insert(Breaker);
+            commands.entity(entity).remove::<Collider>();
+        };
 
     for collision_event in collision_events.read() {
         if let CollisionEvent::Started(entity_a, entity_b, _) = collision_event {
