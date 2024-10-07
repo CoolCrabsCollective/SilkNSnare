@@ -1,10 +1,3 @@
-use crate::config::{
-    COLLISION_GROUP_ENEMIES, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN, COLLISION_GROUP_WALLS,
-};
-use crate::flying_insect::flying_insect::EnsnareRollModel;
-use crate::game::ORANGE_LIGHT_COLOR;
-use crate::pumpkin::Pumpkin;
-use crate::tree::get_target_camera_position;
 use bevy::asset::UntypedAssetId;
 use bevy::{
     asset::LoadState,
@@ -15,6 +8,13 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group};
 use std::any::Any;
+
+use crate::config::{
+    COLLISION_GROUP_ENEMIES, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN, COLLISION_GROUP_WALLS,
+};
+use crate::game::ORANGE_LIGHT_COLOR;
+use crate::pumpkin::Pumpkin;
+use crate::tree::get_target_camera_position;
 
 pub struct MeshLoaderPlugin;
 
@@ -57,7 +57,6 @@ fn process_loaded_gltfs(
     nodes: Res<Assets<GltfNode>>,
     mut mesh_loader: ResMut<MeshLoader>,
     gltf_assets: Res<Assets<Gltf>>,
-    mut ensnare_roll_model: ResMut<EnsnareRollModel>,
 ) {
     for loaded_gltf in mesh_loader.0.iter_mut() {
         if loaded_gltf.processed {
@@ -72,18 +71,6 @@ fn process_loaded_gltfs(
 
         for (name, node_handle) in &gltf.named_nodes {
             println!("{}", name);
-            // if name.to_lowercase().contains("trap") {
-            //     let mesh_handle = meshes.add(node_handle);
-            //     if let (Some(material_handle), Some(transform)) = (
-            //         get_material_from_gltf_node(node_handle, &gltf_meshes, &nodes),
-            //         nodes.get(node_handle).map(|node| node.transform),
-            //     ) {
-            //         println!("Setting up the FOOD TRAP mesh (cocoon)");
-            //         ensnare_roll_model.mesh = mesh_handle;
-            //         ensnare_roll_model.material = material_handle;
-            //     }
-            // }
-
             if name.to_lowercase().contains("terrain") || name.to_lowercase().contains("wall") {
                 info!("Generating collider from level object: {name:?}");
                 if let (Some(mesh), Some(material_handle), Some(transform)) = (

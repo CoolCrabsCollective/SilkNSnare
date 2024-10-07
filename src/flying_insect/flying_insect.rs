@@ -1,20 +1,19 @@
-use super::fruit_fly::DAVID_DEBUG;
 use crate::flying_insect::fruit_fly::{fly_hentai_anime_setup, spawn_fruit_fly, Animation};
-use crate::mesh_loader::{load_level, MeshLoader};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::Web;
 use bevy::app::{App, Plugin, Startup, Update};
-use bevy::asset::{AssetServer, Assets, Handle};
+use bevy::asset::{Assets, Handle};
 use bevy::color::Color;
 use bevy::math::{Mat3, Vec3};
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::{
-    default, Commands, Component, Entity, Mesh, Meshable, PbrBundle, Quat, Query, Res, ResMut,
+    default, Commands, Component, Entity, IntoSystemConfigs, Mesh, Meshable, PbrBundle, Quat, Query, Res, ResMut,
     Resource, Sphere, Time, Timer, TimerMode, Transform, With, Without,
 };
 use rand::Rng;
 use std::f32::consts::PI;
 use std::time::Duration;
+use super::fruit_fly::DAVID_DEBUG;
 
 pub struct FlyingInsectPlugin;
 
@@ -26,7 +25,7 @@ pub struct FruitFlySpawnTimer {
 #[derive(Resource)]
 pub struct EnsnareRollModel {
     pub mesh: Handle<Mesh>,
-    pub material: Handle<StandardMaterial>,
+    pub material: Handle<StandardMaterial>
 }
 
 impl Plugin for FlyingInsectPlugin {
@@ -43,7 +42,6 @@ impl Plugin for FlyingInsectPlugin {
                 TimerMode::Repeating,
             ),
         });
-
         app.insert_resource(EnsnareRollModel {
             mesh: Default::default(),
             material: Default::default(),
@@ -245,17 +243,10 @@ fn insect_ensnared_tick_cooking_and_free(
 }
 
 fn generate_ensnare_roll_model(
-    mut asset_server: ResMut<AssetServer>,
-    mut mesh_loader: ResMut<MeshLoader>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut ensnare_roll_model: ResMut<EnsnareRollModel>,
 ) {
-    let out = load_level(
-        "food.glb#Scene0".into(),
-        &mut asset_server,
-        &mut mesh_loader,
-    );
     ensnare_roll_model.mesh = meshes.add(Sphere { radius: 0.05 }.mesh().ico(3).unwrap());
     ensnare_roll_model.material = materials.add(StandardMaterial {
         base_color: Color::srgb(125.0, 125.0, 125.0),
