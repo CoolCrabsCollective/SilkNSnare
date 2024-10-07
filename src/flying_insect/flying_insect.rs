@@ -292,7 +292,7 @@ fn update_ensnare_roll_model(
                         material: ensnare_roll_model.material.clone(),
                         transform: insect_trans.with_scale(
                             // TODO: is 1.2 enough?
-                            1.2 * insect_trans.scale.x * ensnare_roll_model.transform.scale,
+                            1.5 * insect_trans.scale.x * ensnare_roll_model.transform.scale,
                         ),
                         ..default()
                     }),
