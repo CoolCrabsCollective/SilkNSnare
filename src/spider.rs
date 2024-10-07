@@ -134,6 +134,7 @@ impl Plugin for SpiderPlugin {
 fn update_spider(
     mut commands: Commands,
     mut spider_query: Query<(&mut Spider, &mut Transform)>,
+    insect_query: Query<&FlyingInsect>,
     q_windows: Query<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     buttons: Res<ButtonInput<MouseButton>>,
@@ -209,7 +210,7 @@ fn update_spider(
                 let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
                 let p = ray.origin + ray.direction * λ;
 
-                web.破壊する(p, &mut commands);
+                web.破壊する(p, &insect_query, &mut commands);
             }
         }
     }
@@ -396,6 +397,7 @@ fn handle_ensnared_insect_collision(
             free_enemy_from_web(
                 &mut commands,
                 *snaring_insect_entity,
+                Some(&insect),
                 &mut *web_query.single_mut(),
             );
             commands
