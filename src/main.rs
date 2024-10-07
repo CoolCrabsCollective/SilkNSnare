@@ -12,6 +12,7 @@ use bevy::render::RenderPlugin;
 use bevy::DefaultPlugins;
 use pumpkin::PumpkinPlugin;
 use tree::TreePlugin;
+use crate::flying_obstacle::flying_obstacle::FlyingObstaclePlugin;
 
 mod config;
 mod game;
@@ -25,6 +26,7 @@ mod flying_insect;
 mod health;
 mod skybox;
 mod title_screen;
+mod flying_obstacle;
 
 fn main() {
     let mut app = App::new();
@@ -70,6 +72,7 @@ fn main() {
     app.add_plugins(SpiderPlugin);
     app.add_plugins(FlyingInsectPlugin);
     app.add_plugins(HealthPlugin);
+    app.add_plugins(FlyingObstaclePlugin);
 
     app.run();
 }
