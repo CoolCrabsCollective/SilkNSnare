@@ -1,3 +1,4 @@
+use crate::mesh_loader::{self, load_level, MeshLoader};
 use crate::skybox::{Cubemap, CUBEMAPS};
 use crate::web::WebSimulationPlugin;
 use bevy::asset::LoadState;
@@ -20,7 +21,7 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
+        app.add_systems(Startup, setup.after(mesh_loader::setup));
         app.add_systems(
             Update,
             (cycle_cubemap_asset, asset_loaded.after(cycle_cubemap_asset)),
@@ -36,17 +37,20 @@ impl Plugin for GamePlugin {
     }
 }
 
+pub const ORANGE_LIGHT_COLOR: Color = Color::srgb(1.0, 0.76, 0.42);
+
 /// set up a simple 3D scene
 fn setup(
     mut commands: Commands,
     mut asset_server: ResMut<AssetServer>,
+    mut mesh_loader: ResMut<MeshLoader>,
     mut _meshes: ResMut<Assets<Mesh>>,
     mut _materials: ResMut<Assets<StandardMaterial>>,
 ) {
     //load_level("map.glb#Scene0", &mut commands, &asset_server);
 
     commands.spawn(AudioBundle {
-        source: asset_server.load("web_pressure.ogg"),
+        source: asset_server.load("web_pressure_v2.ogg"),
         settings: PlaybackSettings {
             mode: Loop,
             volume: Volume::new(1.0f32),
@@ -54,9 +58,6 @@ fn setup(
         },
         ..default()
     });
-
-    // old orange
-    let orange_light_color = Color::srgb(0.97, 0.75, 0.6);
 
     // new light violet
     let light_color = Color::srgb(0.79, 0.76, 1.0);
@@ -168,18 +169,24 @@ fn setup(
         image_handle: skybox_handle,
     });
 
-    commands.spawn((SceneBundle {
-        scene: asset_server.load("outdoor_scene.glb#Scene0"),
-        transform: Transform {
-            translation: Vec3::new(-4.0, -2.0, -10.0),
-            rotation: Quat::from_rotation_y(PI),
-            scale: Vec3::ONE,
-        },
-        global_transform: Default::default(),
-        visibility: Default::default(),
-        inherited_visibility: Default::default(),
-        view_visibility: Default::default(),
-    },));
+    load_level(
+        String::from("outdoor_scene.glb"),
+        asset_server.into(),
+        mesh_loader,
+    );
+
+    // commands.spawn((SceneBundle {
+    //     scene: asset_server.load("outdoor_scene.glb#Scene0"),
+    //     transform: Transform {
+    //         translation: Vec3::new(0.0, 0.0, 0.0),
+    //         rotation: Quat::from_rotation_y(0.0),
+    //         scale: Vec3::ONE,
+    //     },
+    //     global_transform: Default::default(),
+    //     visibility: Default::default(),
+    //     inherited_visibility: Default::default(),
+    //     view_visibility: Default::default(),
+    // },));
 }
 
 pub fn get_initial_camera_transform() -> Transform {
@@ -205,7 +212,8 @@ fn asset_loaded(
     mut skyboxes: Query<&mut Skybox>,
 ) {
     if !cubemap.is_loaded && asset_server.load_state(&cubemap.image_handle) == LoadState::Loaded {
-        info!("Swapping to {}...", CUBEMAPS[cubemap.index].0);
+        // SHUT THE FUCK UP
+        //info!("Swapping to {}...", CUBEMAPS[cubemap.index].0);
         let image = images.get_mut(&cubemap.image_handle).unwrap();
         // NOTE: PNGs do not have any metadata that could indicate they contain a cubemap texture,
         // so they appear as one texture. The following code reconfigures the texture as necessary.

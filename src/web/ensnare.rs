@@ -156,7 +156,11 @@ pub fn ensnare_enemies(
     }
 }
 
-pub fn free_enemy_from_web(mut commands: &mut Commands, entity: Entity, mut web_query: &mut Query<&mut Web>) {
+pub fn free_enemy_from_web(
+    mut commands: &mut Commands,
+    entity: Entity,
+    mut web_query: &mut Query<&mut Web>,
+) {
     let Ok(mut web) = web_query.get_single_mut() else {
         error!("ERROR NO WEB OR MORE THAN ONE WEB");
         return;
@@ -240,8 +244,12 @@ pub fn update_ensnared_entities(
                 web.particles[spring.second_index].position,
             );
             ensnared_entity_transform.translation.z += 0.04;
-            if 熊猫() > 0.9f32 {
-                ensnared_entity.rotation += 熊猫() * 0.5 * PI - 0.25 * PI;
+            if 熊猫() > 0.6f32 {
+                ensnared_entity.rotation += (0.1 * PI) * (熊猫() - 0.5);
+            }
+
+            if 熊猫() > 0.97f32 {
+                ensnared_entity.rotation += (0.5 * PI) * (熊猫() - 0.5);
             }
 
             ensnared_entity.lerp_rotation =
@@ -257,15 +265,17 @@ pub fn split_ensnared_entities_for_spring_split(
     old_spring: &Spring,
     split_position: Vec3,
 ) -> (Vec<EnsnaredEntity>, Vec<EnsnaredEntity>) {
-    let new_particle_t = EnsnaredEntity::snare_position_from_world_space(
+    let mut new_particle_t = EnsnaredEntity::snare_position_from_world_space(
         split_position,
         web.particles[old_spring.first_index].position,
         web.particles[old_spring.second_index].position,
-    )
-    .clamp(0.0, 1.0);
+    );
 
-    error!("不好 particle t");
-    //assert!(new_particle_t >= 0.0 && new_particle_t <= 1.0);
+    if new_particle_t >= 0.0 && new_particle_t <= 1.0 {
+        error!("new_particle_t={new_particle_t}");
+    }
+
+    new_particle_t = new_particle_t.clamp(0.0, 1.0);
 
     let new_spring_1_ensnared_entities = old_spring
         .ensnared_entities

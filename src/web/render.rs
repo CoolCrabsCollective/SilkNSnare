@@ -1,3 +1,5 @@
+use super::Web;
+use crate::config::{COLLISION_GROUP_ENEMIES, COLLISION_GROUP_WALLS};
 use bevy::{
     log,
     prelude::*,
@@ -6,10 +8,9 @@ use bevy::{
         render_asset::RenderAssetUsages,
     },
 };
+use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider, Sensor};
 use std::f32::consts::PI;
-
-use super::Web;
 
 pub const WEB_SILK_THICKNESS: f32 = 0.03;
 pub const WEB_SILK_PRISM_BASE: i32 = 4;
@@ -82,7 +83,11 @@ pub fn render_web(
         commands
             .spawn((segment_collider, WebSegmentCollision { spring_index }))
             .insert(ActiveEvents::COLLISION_EVENTS)
-            .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC);
+            .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC)
+            .insert(CollisionGroups {
+                memberships: COLLISION_GROUP_WALLS,
+                filters: Group::ALL,
+            });
     }
 
     commands.spawn((

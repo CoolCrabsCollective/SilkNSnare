@@ -1,16 +1,20 @@
+use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN};
 use crate::flying_insect::flying_insect::FlyingInsect;
 use crate::tree::{树里有小路吗, 树里有点吗};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
 use crate::web::spring::Spring;
 use crate::web::{Particle, Web};
+use bevy::ecs::observer::TriggerTargets;
+use bevy::ecs::query::QueryEntityError;
 use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier3d::na::ComplexField;
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_rapier3d::plugin::RapierContext;
-use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
+use bevy_rapier3d::prelude::{
+    ActiveCollisionTypes, ActiveEvents, Collider, CollisionGroups, Group, QueryFilter,
+};
 use std::f32::consts::PI;
 use std::time::Duration;
-use bevy::ecs::query::QueryEntityError;
 
 pub const NNN: bool = false; // currently october, set this to true in november
 pub const SPIDER_ROTATE_SPEED: f32 = 5.6;
@@ -138,10 +142,24 @@ fn update_spider(
         println!("F U C K");
         return;
     }
-
     let (mut spider, mut spider_transform) = result.unwrap();
     let web = &mut *web_query.single_mut();
+    /*// tree position debug code
+    if let Some(position) = q_windows.single().cursor_position() {
+        let (camera, camera_global_transform) = camera_query.single();
 
+        if let Some(ray) = camera.viewport_to_world(&camera_global_transform, position) {
+            let n = spider_plane.plane.xyz();
+            let d = spider_plane.plane.w;
+            let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
+            let p = ray.origin + ray.direction * λ;
+            if 树里有点吗(p, &rapier_context, camera, camera_global_transform) {
+                println!("树");
+            } else {
+                println!("不树");
+            }
+        }
+    }*/
     if buttons.just_pressed(MouseButton::Left) {
         if let Some(position) = q_windows.single().cursor_position() {
             let (camera, camera_global_transform) = camera_query.single();
@@ -157,6 +175,8 @@ fn update_spider(
                     &mut *spider,
                     web,
                     &rapier_context,
+                    camera,
+                    camera_global_transform,
                 );
             }
         }
@@ -197,22 +217,28 @@ fn handle_ensnared_insect_collision(
     let (mut spider, s_entity) = result.unwrap();
 
     let mut roll_or_eat_insect =
-    |mut commands: &mut Commands, mut insects_query: &mut Query<(&mut FlyingInsect), With<Ensnared>>,
-     entity: Entity, mut web_query: &mut Query<&mut Web>, mut s: &mut Spider| {
-        let Ok(mut insect) = insects_query.get_mut(entity) else {
-            error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
-            return;
+        |mut commands: &mut Commands,
+         mut insects_query: &mut Query<(&mut FlyingInsect), With<Ensnared>>,
+         entity: Entity,
+         mut web_query: &mut Query<&mut Web>,
+         mut s: &mut Spider| {
+            let Ok(mut insect) = insects_query.get_mut(entity) else {
+                error!("구르기 시작하거나 먹는 곤충이 발견되지 않음");
+                return;
+            };
+            if insect.ensnared_and_rolled & insect.cooked {
+                // TIME TO EAT!!!!!!
+                insect.ensnared_and_rolled = false;
+                commands
+                    .entity(insect.rolled_ensnare_entity.unwrap())
+                    .despawn();
+                free_enemy_from_web(commands, entity, web_query);
+                commands.entity(entity).despawn();
+            } else if !insect.ensnared_and_rolled {
+                s.snaring_insect = Some(entity); // only start rolling
+                insect.freed_timer.pause();
+            }
         };
-        if insect.ensnared_and_rolled & insect.cooked { // TIME TO EAT!!!!!!
-            insect.ensnared_and_rolled = false;
-            commands.entity(insect.rolled_ensnare_entity.unwrap()).despawn();
-            free_enemy_from_web(commands, entity, web_query);
-            commands.entity(entity).despawn();
-        } else if !insect.ensnared_and_rolled {
-            s.snaring_insect = Some(entity); // only start rolling
-            insect.freed_timer.pause();
-        }
-    };
 
     if spider.snaring_insect == None {
         for collision_event in collision_events.read() {
@@ -224,16 +250,40 @@ fn handle_ensnared_insect_collision(
                     insects_query.get(*entity_b),
                 ) {
                     (true, false, Ok(mut insect), Err(_)) => {
-                        roll_or_eat_insect(&mut commands, &mut insects_query, *entity_a, &mut web_query, spider.as_mut());
+                        roll_or_eat_insect(
+                            &mut commands,
+                            &mut insects_query,
+                            *entity_a,
+                            &mut web_query,
+                            spider.as_mut(),
+                        );
                     }
                     (true, false, Err(_), Ok(insect)) => {
-                        roll_or_eat_insect(&mut commands, &mut insects_query, *entity_b, &mut web_query, spider.as_mut());
+                        roll_or_eat_insect(
+                            &mut commands,
+                            &mut insects_query,
+                            *entity_b,
+                            &mut web_query,
+                            spider.as_mut(),
+                        );
                     }
                     (false, true, Ok(insect), Err(_)) => {
-                        roll_or_eat_insect(&mut commands, &mut insects_query, *entity_a, &mut web_query, spider.as_mut());
+                        roll_or_eat_insect(
+                            &mut commands,
+                            &mut insects_query,
+                            *entity_a,
+                            &mut web_query,
+                            spider.as_mut(),
+                        );
                     }
                     (false, true, Err(_), Ok(insect)) => {
-                        roll_or_eat_insect(&mut commands, &mut insects_query, *entity_b, &mut web_query, spider.as_mut());
+                        roll_or_eat_insect(
+                            &mut commands,
+                            &mut insects_query,
+                            *entity_b,
+                            &mut web_query,
+                            spider.as_mut(),
+                        );
                     }
                     _ => {
                         // the collision involved other entity types
@@ -296,8 +346,7 @@ fn handle_ensnared_insect_collision(
             ss_snare_timer.timer.pause();
 
             // Mark insect as rolled, wait on timeout before allowing to eat
-            if let Ok(mut insect) = insects_query
-                .get_mut(spider.snaring_insect.unwrap()) {
+            if let Ok(mut insect) = insects_query.get_mut(spider.snaring_insect.unwrap()) {
                 insect.ensnared_and_rolled = true;
                 spider.snaring_insect = None;
             };
@@ -305,7 +354,7 @@ fn handle_ensnared_insect_collision(
         if spider.snaring_insect != None {
             match insects_query.get_mut(spider.snaring_insect.unwrap()) {
                 Ok(_) => {}
-                Err(_) => {spider.snaring_insect = None}
+                Err(_) => spider.snaring_insect = None,
             };
         }
     }
@@ -385,6 +434,8 @@ fn set_new_target(
     spider: &mut Spider,
     web: &mut Web,
     rapier_context: &Res<RapierContext>,
+    cam: &Camera,
+    cam_transform: &GlobalTransform,
 ) {
     let position = spider.current_position.to_vec3(web);
 
@@ -417,34 +468,20 @@ fn set_new_target(
             _ => -1.0,
         };
 
-        if t == 0.0 {
+        if t == 0.0
+            || web.particles[from_spring.first_index]
+                .position
+                .distance_squared(spider.current_position.to_vec3(web))
+                < 0.03 * 0.03
+        {
             from_particle_idx = Some(from_spring.first_index);
-        } else if t == 1.0 {
+        } else if t == 1.0
+            || web.particles[from_spring.second_index]
+                .position
+                .distance_squared(spider.current_position.to_vec3(web))
+                < 0.03 * 0.03
+        {
             from_particle_idx = Some(from_spring.second_index);
-        }
-    }
-
-    if let Some((spring_index, current_t)) = from_spring {
-        let spring: &Spring = &web.springs[spring_index];
-        let mut dir = web.particles[spring.second_index].position
-            - web.particles[spring.first_index].position;
-        let dir_len = dir.length();
-
-        dir = dir.normalize();
-        if dir.dot(target_dir) > 0.98 {
-            let delta_t = (target_δ.dot(dir).abs() / dir_len);
-            spider.target_position =
-                SpiderPosition::WEB(spring_index, (current_t + delta_t).clamp(0.0, 1.0));
-            // println!("Moving along spring from particle location, final_t={final_t}");
-            return;
-        }
-
-        if dir.dot(target_dir) < -0.98 {
-            let delta_t = (target_δ.dot(dir).abs() / dir_len);
-            spider.target_position =
-                SpiderPosition::WEB(spring_index, (current_t - delta_t).clamp(0.0, 1.0));
-            // println!("Moving along spring from particle location, final_t={final_t}");
-            return;
         }
     }
 
@@ -467,14 +504,40 @@ fn set_new_target(
 
                 dir = dir.normalize();
                 if dir.dot(target_dir) > 0.98 {
-                    let delta_t = (target_δ.dot(dir).abs() / dir_len).clamp(0.0, 1.0);
-                    spider.current_position = SpiderPosition::WEB(i, t);
-                    spider.target_position = SpiderPosition::WEB(i, 1.0 - delta_t);
+                    let mut dest_t = (target_δ.dot(dir).abs() / dir_len).clamp(0.0, 1.0);
+                    if spring.second_index == from_particle_idx.unwrap() {
+                        dest_t = 1.0 - dest_t;
+                    }
 
-                    // println!("Moving along spring from particle location, final_t={final_t}");
+                    spider.current_position = SpiderPosition::WEB(i, t);
+                    spider.target_position = SpiderPosition::WEB(i, dest_t);
+
+                    println!("Moving along spring from particle location");
                     return;
                 }
             }
+        }
+    } else if let Some((spring_index, current_t)) = from_spring {
+        let spring: &Spring = &web.springs[spring_index];
+        let mut dir = web.particles[spring.second_index].position
+            - web.particles[spring.first_index].position;
+        let dir_len = dir.length();
+
+        dir = dir.normalize();
+        if dir.dot(target_dir) > 0.98 {
+            let delta_t = (target_δ.dot(dir).abs() / dir_len);
+            spider.target_position =
+                SpiderPosition::WEB(spring_index, (current_t + delta_t).clamp(0.0, 1.0));
+            println!("Moving along spring from middle of spring");
+            return;
+        }
+
+        if dir.dot(target_dir) < -0.98 {
+            let delta_t = (target_δ.dot(dir).abs() / dir_len);
+            spider.target_position =
+                SpiderPosition::WEB(spring_index, (current_t - delta_t).clamp(0.0, 1.0));
+            println!("Moving along spring from middle of spring");
+            return;
         }
     }
 
@@ -509,10 +572,23 @@ fn set_new_target(
         dest_spring_idx = Some(i);
     }
 
-    let existing_p1 = web.get_particle_index(position, 0.1);
-    let existing_p2 = web.get_particle_index(target_pos, 0.1);
+    let existing_p1 = web.get_particle_index(position, 0.03);
+    let existing_p2 = web.get_particle_index(target_pos, 0.03);
 
     if existing_p1 == existing_p2 && existing_p1.is_some() {
+        println!("Not initiating to move far enough to initiate movement");
+
+        if dest_spring_idx.is_some() {
+            let spring = &web.springs[dest_spring_idx.unwrap()];
+            spider.target_position = SpiderPosition::WEB(
+                dest_spring_idx.unwrap(),
+                if spring.first_index == existing_p2.unwrap() {
+                    0.0
+                } else {
+                    1.0
+                },
+            );
+        }
         return; // not initiating to move far enough to initiate movement
     }
 
@@ -521,24 +597,24 @@ fn set_new_target(
         target_pos = position + target_δ;
 
         let mut i = 0;
-        while !树里有点吗(target_pos, rapier_context) && i < 10 {
+        while !树里有点吗(target_pos, rapier_context, cam, cam_transform) && i < 10 {
             target_pos += target_dir * 0.1;
             i += 1;
         }
 
-        if !树里有点吗(target_pos, rapier_context) {
+        if !树里有点吗(target_pos, rapier_context, cam, cam_transform) {
             // 这个向没有树
             println!("Clicked in direction with nothing in front, doing nothing");
             return;
         }
 
-        if 树里有小路吗(position, target_pos, rapier_context) {
+        if 树里有小路吗(position, target_pos, rapier_context, cam, cam_transform) {
             println!("Tree to Tree movement no silk");
             spider.current_position = SpiderPosition::TREE(position);
             spider.target_position = SpiderPosition::TREE(position + target_δ);
             return;
         }
-    } else if 树里有小路吗(position, target_pos, rapier_context) {
+    } else if 树里有小路吗(position, target_pos, rapier_context, cam, cam_transform) {
         println!("Tree to Tree movement no silk");
         spider.current_position = SpiderPosition::TREE(position);
         spider.target_position = SpiderPosition::TREE(position + target_δ);
@@ -563,7 +639,13 @@ fn set_new_target(
                 t = 1.0 - t;
             }
 
-            spider.current_position = SpiderPosition::WEB(spring_idx.unwrap(), 1.0 - t);
+            let t_start = if spring.first_index == existing_p1.unwrap() {
+                0.0
+            } else {
+                1.0
+            };
+
+            spider.current_position = SpiderPosition::WEB(spring_idx.unwrap(), t_start);
             spider.target_position = SpiderPosition::WEB(spring_idx.unwrap(), t);
             println!("Path is along existing spring");
             return;
@@ -578,6 +660,12 @@ fn set_new_target(
             web.split_spring(from_spring_index, position);
             hack_swap_removed_a_spring = true;
         } else {
+            let in_tree = 树里有点吗(position, rapier_context, cam, cam_transform);
+            if !in_tree {
+                println!("[FUCK] Trying to create new spring start point but NOT IN TREE");
+                return;
+            }
+
             web.particles.push(Particle {
                 position: position,
                 velocity: Default::default(),
@@ -595,6 +683,12 @@ fn set_new_target(
 
     let p2 = if existing_p2.is_none() {
         if dest_spring_idx.is_none() {
+            let in_tree = 树里有点吗(target_pos, rapier_context, cam, cam_transform);
+            if !in_tree {
+                println!("[FUCK] Trying to create new spring end point but target NOT IN TREE");
+                return;
+            }
+
             web.particles.push(Particle {
                 position: target_pos,
                 velocity: Default::default(),
@@ -666,5 +760,9 @@ fn spawn_spider(
             Collider::capsule_y(1.0, 1.0),
         ))
         .insert(ActiveEvents::COLLISION_EVENTS)
-        .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC);
+        .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC)
+        .insert(CollisionGroups {
+            memberships: COLLISION_GROUP_PLAYER,
+            filters: Group::ALL,
+        });
 }

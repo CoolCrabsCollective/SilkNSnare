@@ -1,5 +1,7 @@
+use crate::config::COLLISION_GROUP_ENEMIES;
 use crate::flying_insect::flying_insect::{BezierCurve, FlyingInsect, FruitFlySpawnTimer};
 use bevy::prelude::*;
+use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, Collider};
 use rand::Rng;
 
@@ -85,7 +87,11 @@ pub fn spawn_fruit_fly(
                 Collider::capsule_y(1.0, 1.0),
             ))
             .insert(ActiveEvents::COLLISION_EVENTS)
-            .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC);
+            .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC)
+            .insert(CollisionGroups {
+                memberships: COLLISION_GROUP_ENEMIES,
+                filters: Group::ALL,
+            });
     }
 }
 
