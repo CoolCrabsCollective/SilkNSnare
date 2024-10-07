@@ -1,8 +1,10 @@
 use std::time::Duration;
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::math::{EulerRot, Mat4};
-use bevy::prelude::{Commands, Component, Entity, Quat, Query, Res, Resource, Time, Timer, TimerMode, Transform, Vec3, Without};
+use bevy::prelude::{Commands, Component, Entity, EventReader, Quat, Query, Res, Resource, Time, Timer, TimerMode, Transform, Vec3, Without};
+use bevy_rapier3d::pipeline::CollisionEvent;
 use crate::flying_obstacle::rock::spawn_rock;
+use crate::web::Web;
 
 pub struct FlyingObstaclePlugin;
 
