@@ -71,7 +71,7 @@ fn process_loaded_gltfs(
         for (name, node_handle) in &gltf.named_nodes {
             println!("{}", name);
             if name.to_lowercase().contains("terrain") || name.to_lowercase().contains("wall") {
-                log::info!("Generating collider from level object: {name:?}");
+                info!("Generating collider from level object: {name:?}");
                 if let (Some(mesh), Some(material_handle), Some(transform)) = (
                     get_mesh_from_gltf_node(node_handle, &meshes, &gltf_meshes, &nodes),
                     get_material_from_gltf_node(node_handle, &gltf_meshes, &nodes),
@@ -98,18 +98,18 @@ fn process_loaded_gltfs(
                                     }
                                 } else {
                                     CollisionGroups {
-                                        memberships: Group::ALL,
-                                        filters: Group::ALL,
+                                        memberships: Group::NONE,
+                                        filters: Group::NONE,
                                     }
                                 },
                             );
                         }
                         Err(err) => {
-                            log::error!("{err:?}");
+                            error!("{err:?}");
                         }
                     }
                 } else {
-                    log::error!("Node {name:?} was missing either a mesh or a transform");
+                    error!("Node {name:?} was missing either a mesh or a transform");
                 }
             }
 

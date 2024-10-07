@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_TERRAIN};
+use crate::config::COLLISION_GROUP_TERRAIN;
 use crate::{
     game::get_initial_camera_transform,
     mesh_loader::{self, load_level, MeshLoader},
@@ -115,10 +115,16 @@ pub fn 树里有点吗(
         ray.direction.as_vec3(),
         10.0,
         true,
-        QueryFilter::new().groups(CollisionGroups {
-            memberships: COLLISION_GROUP_ALL,
-            filters: COLLISION_GROUP_TERRAIN,
-        }),
+        QueryFilter {
+            flags: Default::default(),
+            groups: Some(CollisionGroups {
+                memberships: Default::default(),
+                filters: COLLISION_GROUP_TERRAIN,
+            }),
+            exclude_collider: None,
+            exclude_rigid_body: None,
+            predicate: None,
+        },
     );
 
     if let Some((body, once)) = told_me {

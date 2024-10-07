@@ -1,4 +1,4 @@
-use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_TERRAIN};
+use crate::config::{COLLISION_GROUP_ALL, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN};
 use crate::flying_insect::flying_insect::FlyingInsect;
 use crate::tree::{树里有小路吗, 树里有点吗};
 use crate::web::ensnare::{free_enemy_from_web, Ensnared};
@@ -11,7 +11,7 @@ use bevy_rapier3d::na::ComplexField;
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_rapier3d::plugin::RapierContext;
 use bevy_rapier3d::prelude::{
-    ActiveCollisionTypes, ActiveEvents, Collider, CollisionGroups, QueryFilter,
+    ActiveCollisionTypes, ActiveEvents, Collider, CollisionGroups, Group, QueryFilter,
 };
 use std::f32::consts::PI;
 use std::time::Duration;
@@ -145,7 +145,21 @@ fn update_spider(
 
     let (mut spider, mut spider_transform) = result.unwrap();
     let web = &mut *web_query.single_mut();
+    if let Some(position) = q_windows.single().cursor_position() {
+        let (camera, camera_global_transform) = camera_query.single();
 
+        if let Some(ray) = camera.viewport_to_world(&camera_global_transform, position) {
+            let n = spider_plane.plane.xyz();
+            let d = spider_plane.plane.w;
+            let λ = -(n.dot(ray.origin) + d) / (n.dot(*ray.direction));
+            let p = ray.origin + ray.direction * λ;
+            if 树里有点吗(p, &rapier_context, camera, camera_global_transform) {
+                println!("树");
+            } else {
+                println!("不树");
+            }
+        }
+    }
     if buttons.just_pressed(MouseButton::Left) {
         if let Some(position) = q_windows.single().cursor_position() {
             let (camera, camera_global_transform) = camera_query.single();
@@ -715,5 +729,9 @@ fn spawn_spider(
             Collider::capsule_y(1.0, 1.0),
         ))
         .insert(ActiveEvents::COLLISION_EVENTS)
-        .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC);
+        .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC)
+        .insert(CollisionGroups {
+            memberships: COLLISION_GROUP_PLAYER,
+            filters: Group::ALL,
+        });
 }
