@@ -12,6 +12,8 @@ use std::any::Any;
 use crate::config::{
     COLLISION_GROUP_ENEMIES, COLLISION_GROUP_PLAYER, COLLISION_GROUP_TERRAIN, COLLISION_GROUP_WALLS,
 };
+use crate::game::ORANGE_LIGHT_COLOR;
+use crate::pumpkin::Pumpkin;
 
 pub struct MeshLoaderPlugin;
 
@@ -108,6 +110,30 @@ fn process_loaded_gltfs(
                     }
                 } else {
                     error!("Node {name:?} was missing either a mesh or a transform");
+                }
+            }
+
+            if name.to_lowercase().contains("pumpkin") {
+                if let Some(transform) = nodes.get(node_handle).map(|node| node.transform) {
+                    log::warn!(
+                        "Spawning point light at {:?}",
+                        transform.translation + Vec3::new(0.0, 5.0, 0.0)
+                    );
+                    commands.spawn((
+                        PointLightBundle {
+                            transform: transform
+                                .with_translation(transform.translation + Vec3::new(0.0, 5.0, 0.0)),
+                            point_light: PointLight {
+                                intensity: 500_000.0,
+                                color: ORANGE_LIGHT_COLOR,
+                                shadows_enabled: true,
+                                radius: 1.0,
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        Pumpkin,
+                    ));
                 }
             }
         }
